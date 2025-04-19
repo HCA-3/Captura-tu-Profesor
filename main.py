@@ -1,4 +1,3 @@
-# main.py
 from fastapi import FastAPI, HTTPException
 from services.VideojuegoService import VideojuegoService
 from services.DesarrolladorService import DesarrolladorService
@@ -11,7 +10,16 @@ from repositories.ReseñaRepository import ReseñaRepository
 from utils.Exceptions import ElementoNoEncontradoError, ElementoDuplicadoError
 import uvicorn
 import logging
+import sys
+from pathlib import Path
 
+print("Python path:", sys.path)
+
+project_path = str(Path(__file__).parent)
+sys.path.append(project_path)
+print(f"Añadido al path: {project_path}")
+
+from services.VideojuegoService import VideojuegoService
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
