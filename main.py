@@ -12,7 +12,6 @@ from utils.Exceptions import ElementoNoEncontradoError, ElementoDuplicadoError
 import uvicorn
 import logging
 
-# Configuración inicial
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -22,7 +21,6 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# Inicialización de repositorios y servicios
 repositorios = {
     'videojuegos': VideojuegoRepository('videojuegos.csv'),
     'desarrolladores': DesarrolladorRepository('desarrolladores.csv'),
@@ -44,7 +42,6 @@ async def startup_event():
     for nombre, repo in repositorios.items():
         logger.info(f"- {nombre}: {repo.csv_file}")
 
-# Endpoints para Videojuegos
 @app.post("/videojuegos/", response_model=dict)
 def crear_videojuego(videojuego_data: dict):
     try:
