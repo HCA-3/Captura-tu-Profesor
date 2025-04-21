@@ -21,3 +21,13 @@ except HTTPException as e:
     print(f"Error crítico al cargar datos iniciales: {e.detail}. Iniciando con datos vacíos.")
     _db_juegos = []
     _db_desarrolladores = []
+
+# --- Operaciones CRUD para Desarrolladores ---
+
+def obtener_desarrollador_por_id(id_desarrollador: int) -> Optional[Dict[str, Any]]:
+    """Busca un desarrollador por ID (incluyendo borrados lógicamente)."""
+    for dev in _db_desarrolladores:
+        # Usamos .get() para evitar KeyError si el campo falta por alguna razón
+        if dev.get("id") == id_desarrollador:
+            return dev
+    return None
