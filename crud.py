@@ -192,3 +192,24 @@ def obtener_juegos(saltar: int = 0, limite: int = 100, incluir_eliminados: bool 
 
     # Aplicar paginación a los resultados filtrados
     return juegos_filtrados[saltar : saltar + limite]
+
+def crear_juego(datos_juego: JuegoCrear) -> Dict[str, Any]:
+    """Crea un nuevo juego."""
+    # Verificar que el desarrollador exista y esté activo
+    desarrollador = obtener_desarrollador_activo_por_id(datos_juego.desarrollador_id)
+    if not desarrollador:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, # 400 podría ser más apropiado que 404 si el ID existe pero no está activo
+            detail=f"El desarrollador con ID {datos_juego.desarrollador_id} no existe o no está activo."
+        )
+
+    nuevo_id = obtener_siguiente_id()
+    nuevo_juego_dict = Juego(
+        id=nuevo_id,
+        esta_eliminado=False,
+        **datos_juego.dict()
+    ).dict()
+
+    _db_juegos.append(nuevo_juego_dict)
+    guardar_juegos(_db_juegos) # Persistir
+    return nuevo_juego_dict
