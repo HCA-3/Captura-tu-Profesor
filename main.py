@@ -186,3 +186,10 @@ def eliminar_desarrollador_existente(id_desarrollador: int):
         )
     # Devuelve el objeto marcado como eliminado (contiene esta_eliminado=True)
     return desarrollador_eliminado
+
+@app.get(
+    "/desarrolladores/buscar/por_nombre/",
+    response_model=List[Desarrollador],
+    tags=["Desarrolladores"],
+    summary="Buscar desarrolladores por nombre"
+    )
