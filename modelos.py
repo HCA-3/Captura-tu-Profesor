@@ -27,3 +27,7 @@ class JuegoBase(BaseModel):
 
 class JuegoCrear(JuegoBase):
     pass # No necesita campos adicionales para la creación
+
+class Juego(JuegoBase):
+    id: int
+    esta_eliminado: bool = False # Para borrado lógico
