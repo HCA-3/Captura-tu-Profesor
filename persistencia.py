@@ -1,3 +1,4 @@
+# persistencia.py
 import csv
 import os
 from typing import List, Dict, Any
@@ -32,21 +33,23 @@ def _cargar_datos_desde_csv(nombre_archivo: str, nombres_campos: List[str]) -> L
                 detail=f"No se pudo crear el archivo de datos necesario: {os.path.basename(nombre_archivo)}"
             ) from e
 
-datos = []
+
+    datos = []
     try:
         with open(nombre_archivo, mode='r', newline='', encoding='utf-8') as archivo_csv:
             lector = csv.DictReader(archivo_csv)
             # Validación simple de cabeceras (podría ser más robusta)
             if not lector.fieldnames or set(lector.fieldnames) != set(nombres_campos):
                  print(f"Advertencia: Las cabeceras del CSV {nombre_archivo} no coinciden o están vacías. Esperadas: {nombres_campos}, Encontradas: {lector.fieldnames}. Se intentará continuar.")
-                 
+                 # Podrías decidir lanzar un error aquí si las cabeceras son críticas
+
             for fila in lector:
                 # Convertir tipos de datos y manejar posibles valores faltantes o incorrectos
                 fila_procesada = {}
                 for clave, valor in fila.items():
                     if clave not in nombres_campos: # Ignorar columnas extra no esperadas
                         continue
-                    
+
                     if clave in ['id', 'ano_lanzamiento', 'ano_fundacion', 'desarrollador_id']:
                         fila_procesada[clave] = int(valor) if valor else None
                     elif clave == 'esta_eliminado':
@@ -58,11 +61,11 @@ datos = []
                     else:
                         fila_procesada[clave] = valor if valor else None # Guardar None si está vacío
 
-                    # Asegurar que todas las claves esperadas existan, aunque sea con None
+                # Asegurar que todas las claves esperadas existan, aunque sea con None
                 for campo_esperado in nombres_campos:
                     if campo_esperado not in fila_procesada:
                          fila_procesada[campo_esperado] = None
-                         
+
                 datos.append(fila_procesada)
 
     except FileNotFoundError:
@@ -113,7 +116,11 @@ def cargar_juegos() -> List[Dict[str, Any]]:
 def guardar_juegos(juegos: List[Dict[str, Any]]):
     """Guarda la lista de juegos en juegos.csv."""
     _guardar_datos_en_csv(ARCHIVO_JUEGOS, juegos, CAMPOS_JUEGO)
-    
+
+def cargar_desarrolladores() -> List[Dict[str, Any]]:
+    """Carga la lista de desarrolladores desde desarrolladores.csv."""
+    return _cargar_datos_desde_csv(ARCHIVO_DESARROLLADORES, CAMPOS_DESARROLLADOR)
+
 def guardar_desarrolladores(desarrolladores: List[Dict[str, Any]]):
     """Guarda la lista de desarrolladores en desarrolladores.csv."""
     _guardar_datos_en_csv(ARCHIVO_DESARROLLADORES, desarrolladores, CAMPOS_DESARROLLADOR)
