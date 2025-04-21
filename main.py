@@ -218,3 +218,29 @@ def buscar_desarrolladores(
     tags=["Juegos"],
     summary="Crear un nuevo juego"
     )
+
+def crear_nuevo_juego(datos_juego: JuegoCrear):
+    """
+    Crea un nuevo juego asociado a un desarrollador existente y activo.
+
+    - **datos_juego**: JSON con los datos del juego.
+        - `titulo` (str): Requerido.
+        - `genero` (str): Requerido.
+        - `plataformas` (List[str]): Lista de plataformas.
+        - `ano_lanzamiento` (int, opcional): Año de lanzamiento.
+        - `desarrollador_id` (int): Requerido, ID de un desarrollador activo.
+    \f
+    :param datos_juego: Datos Pydantic validados.
+    :return: El objeto Juego creado.
+    :raises HTTPException 400: Si el `desarrollador_id` no corresponde a un desarrollador activo.
+    :raises HTTPException 500: Si ocurre un error interno al guardar.
+    """
+    try:
+        # La función crud maneja la validación del desarrollador (lanzando 400)
+        nuevo_juego = crud.crear_juego(datos_juego=datos_juego)
+        return nuevo_juego
+    except HTTPException as http_exc:
+        raise http_exc # Re-lanzar 400 u otros errores HTTP
+    except Exception as e:
+        print(f"Error inesperado al crear juego: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error interno al intentar crear el juego.")
