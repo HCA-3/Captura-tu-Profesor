@@ -35,3 +35,53 @@ async def manejador_excepciones_generico(request, exc: Exception):
     tags=["Desarrolladores"],
     summary="Crear un nuevo desarrollador" # Título corto para la UI de Docs
     )
+
+def crear_nuevo_desarrollador(datos_desarrollador: DesarrolladorCrear): # Modelo de entrada en español
+    """
+    Crea un nuevo desarrollador en la base de datos (archivo CSV).
+
+    - **datos_desarrollador**: JSON con los datos del desarrollador.
+        - `nombre` (str): Requerido.
+        - `pais` (str, opcional): País de origen.
+        - `ano_fundacion` (int, opcional): Año de fundación.
+    \f
+    :param datos_desarrollador: Datos Pydantic validados.
+    :return: El objeto Desarrollador creado.
+    :raises HTTPException 409: Si ya existe un desarrollador activo con ese nombre.
+    :raises HTTPException 500: Si ocurre un error interno al guardar.
+    """
+    try:
+        # La función crud ya maneja la lógica y la excepción 409
+        nuevo_dev = crud.crear_desarrollador(datos_desarrollador=datos_desarrollador)
+        return nuevo_dev
+    except HTTPException as http_exc:
+        raise http_exc # Re-lanzar excepciones HTTP específicas (409, 400, etc.)
+    except Exception as e:
+        # Captura cualquier otro error inesperado durante la creación/guardado
+        print(f"Error inesperado al crear desarrollador: {e}") # Loggear el error
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error interno al intentar crear el desarrollador.")
+
+def crear_nuevo_desarrollador(datos_desarrollador: DesarrolladorCrear): # Modelo de entrada en español
+    """
+    Crea un nuevo desarrollador en la base de datos (archivo CSV).
+
+    - **datos_desarrollador**: JSON con los datos del desarrollador.
+        - `nombre` (str): Requerido.
+        - `pais` (str, opcional): País de origen.
+        - `ano_fundacion` (int, opcional): Año de fundación.
+    \f
+    :param datos_desarrollador: Datos Pydantic validados.
+    :return: El objeto Desarrollador creado.
+    :raises HTTPException 409: Si ya existe un desarrollador activo con ese nombre.
+    :raises HTTPException 500: Si ocurre un error interno al guardar.
+    """
+    try:
+        # La función crud ya maneja la lógica y la excepción 409
+        nuevo_dev = crud.crear_desarrollador(datos_desarrollador=datos_desarrollador)
+        return nuevo_dev
+    except HTTPException as http_exc:
+        raise http_exc # Re-lanzar excepciones HTTP específicas (409, 400, etc.)
+    except Exception as e:
+        # Captura cualquier otro error inesperado durante la creación/guardado
+        print(f"Error inesperado al crear desarrollador: {e}") # Loggear el error
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error interno al intentar crear el desarrollador.")
