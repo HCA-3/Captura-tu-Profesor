@@ -57,3 +57,8 @@ datos = []
                         fila_procesada[clave] = [p.strip() for p in valor.split(',') if p.strip()] if valor else []
                     else:
                         fila_procesada[clave] = valor if valor else None # Guardar None si está vacío
+
+                    # Asegurar que todas las claves esperadas existan, aunque sea con None
+                for campo_esperado in nombres_campos:
+                    if campo_esperado not in fila_procesada:
+                         fila_procesada[campo_esperado] = None
