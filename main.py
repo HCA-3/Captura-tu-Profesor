@@ -351,3 +351,23 @@ def eliminar_juego_existente(id_juego: int):
     tags=["Juegos"],
     summary="Filtrar juegos por género"
     )
+
+def filtrar_juegos(
+    genero: str = Query(..., min_length=1, description="Género por el cual filtrar (búsqueda parcial, insensible a mayúsculas)")
+    ):
+    """
+    Filtra la lista de juegos activos cuyo género contenga el texto proporcionado.
+
+    Endpoint de ejemplo para filtrado basado en un atributo.
+    """
+    try:
+        juegos = crud.filtrar_juegos_por_genero(genero=genero)
+        return juegos
+    except Exception as e:
+        print(f"Error inesperado filtrando juegos por género: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error interno durante el filtrado de juegos.")
+
+
+# --- Mapa de Endpoints (Descripción en Español) ---
+# FastAPI genera automáticamente /docs y /redoc
+# Incluimos el resumen textual solicitado.
