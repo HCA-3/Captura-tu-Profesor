@@ -31,3 +31,7 @@ class JuegoCrear(JuegoBase):
 class Juego(JuegoBase):
     id: int
     esta_eliminado: bool = False # Para borrado lógico
+    
+class Config:
+        orm_mode = True
+        allow_population_by_field_name = True
