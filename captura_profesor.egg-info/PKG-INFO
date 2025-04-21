@@ -1,0 +1,6 @@
+Metadata-Version: 2.4
+Name: captura_profesor
+Version: 0.1
+Requires-Dist: fastapi
+Requires-Dist: uvicorn
+Dynamic: requires-dist

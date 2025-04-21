@@ -1,0 +1,7 @@
+README.md
+setup.py
+captura_profesor.egg-info/PKG-INFO
+captura_profesor.egg-info/SOURCES.txt
+captura_profesor.egg-info/dependency_links.txt
+captura_profesor.egg-info/requires.txt
+captura_profesor.egg-info/top_level.txt
