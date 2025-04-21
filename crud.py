@@ -81,3 +81,27 @@ def actualizar_desarrollador(id_desarrollador: int, datos_actualizacion: Desarro
         if dev.get("id") == id_desarrollador:
             indice_desarrollador = i
             break
+        
+if indice_desarrollador == -1:
+        return None # O podríamos lanzar 404 aquí directamente
+
+    desarrollador_a_actualizar = _db_desarrolladores[indice_desarrollador]
+
+    # Prevenir la actualización de un desarrollador eliminado (opcional, depende de la lógica de negocio)
+    # if desarrollador_a_actualizar.get("esta_eliminado"):
+    #     raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No se puede actualizar un desarrollador eliminado.")
+
+    # Obtener datos a actualizar (solo los proporcionados)
+    datos_nuevos = datos_actualizacion.dict(exclude_unset=True)
+
+    # Opcional: Validar conflicto de nombre si se está cambiando
+    if "nombre" in datos_nuevos:
+        nombre_nuevo = datos_nuevos["nombre"].strip().lower()
+        nombre_actual = desarrollador_a_actualizar.get("nombre", "").strip().lower()
+        if nombre_nuevo != nombre_actual: # Solo validar si el nombre realmente cambia
+             existente = next((d for i, d in enumerate(_db_desarrolladores) if i != indice_desarrollador and d.get("nombre", "").strip().lower() == nombre_nuevo and not d.get("esta_eliminado")), None)
+             if existente:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail=f"Ya existe otro desarrollador activo con el nombre '{datos_nuevos['nombre']}'."
+                )
