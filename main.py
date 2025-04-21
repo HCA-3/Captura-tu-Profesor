@@ -117,3 +117,17 @@ def leer_desarrolladores(
     tags=["Desarrolladores"],
     summary="Obtener un desarrollador por ID"
     )
+
+def leer_desarrollador_por_id(id_desarrollador: int):
+    """
+    Obtiene los detalles de un desarrollador específico usando su ID.
+
+    Solo devuelve desarrolladores que **no** estén marcados como eliminados.
+    """
+    db_desarrollador = crud.obtener_desarrollador_activo_por_id(id_desarrollador=id_desarrollador)
+    if db_desarrollador is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"El desarrollador con ID {id_desarrollador} no fue encontrado o está inactivo."
+        )
+    return db_desarrollador
