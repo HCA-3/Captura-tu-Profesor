@@ -17,3 +17,13 @@ class Desarrollador(DesarrolladorBase):
  class Config:
         orm_mode = True # Permite compatibilidad con ORMs, útil aquí para estructura
         allow_population_by_field_name = True # Permite usar 'ano_fundacion' en lugar de 'ano_fundacion' si es necesario
+
+class JuegoBase(BaseModel):
+    titulo: str = Field(..., example="The Last of Us Parte II")
+    genero: str = Field(..., example="Acción-Aventura")
+    plataformas: List[str] = Field(default_factory=list, example=["PlayStation 4", "PlayStation 5"])
+    ano_lanzamiento: Optional[int] = Field(None, example=2020)
+    desarrollador_id: int = Field(..., example=1) # Clave foránea al desarrollador
+
+class JuegoCrear(JuegoBase):
+    pass # No necesita campos adicionales para la creación
