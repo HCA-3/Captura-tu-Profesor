@@ -11,3 +11,7 @@ ARCHIVO_DESARROLLADORES = os.path.join(DIRECTORIO_DATOS, "desarrolladores.csv")
 
 # Asegurarse de que el directorio de datos exista
 os.makedirs(DIRECTORIO_DATOS, exist_ok=True)
+
+# Definir las cabeceras (fieldnames) para cada CSV EN ESPAÑOL
+CAMPOS_JUEGO = ['id', 'titulo', 'genero', 'plataformas', 'ano_lanzamiento', 'desarrollador_id', 'esta_eliminado']
+CAMPOS_DESARROLLADOR = ['id', 'nombre', 'pais', 'ano_fundacion', 'esta_eliminado']
