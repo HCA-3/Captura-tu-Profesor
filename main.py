@@ -169,3 +169,20 @@ def actualizar_desarrollador_existente(id_desarrollador: int, datos_desarrollado
     tags=["Desarrolladores"],
     summary="Eliminar (lógicamente) un desarrollador"
     )
+
+def eliminar_desarrollador_existente(id_desarrollador: int):
+    """
+    Marca un desarrollador como eliminado (borrado lógico).
+
+    El registro permanece en el sistema (`esta_eliminado = True`) para mantener
+    la trazabilidad, pero no aparecerá en las búsquedas normales.
+    Devuelve el objeto del desarrollador con el estado actualizado.
+    """
+    desarrollador_eliminado = crud.eliminar_logico_desarrollador(id_desarrollador=id_desarrollador)
+    if desarrollador_eliminado is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"No se encontró el desarrollador con ID {id_desarrollador} o ya estaba eliminado."
+        )
+    # Devuelve el objeto marcado como eliminado (contiene esta_eliminado=True)
+    return desarrollador_eliminado
