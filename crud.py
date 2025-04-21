@@ -247,3 +247,7 @@ def actualizar_juego(id_juego: int, datos_actualizacion: JuegoCrear) -> Optional
     for clave, valor in datos_nuevos.items():
          if clave in JuegoBase.__fields__: # Actualizar solo campos del modelo base
               juego_a_actualizar[clave] = valor
+
+ _db_juegos[indice_juego] = juego_a_actualizar
+    guardar_juegos(_db_juegos) # Persistir
+    return juego_a_actualizar
