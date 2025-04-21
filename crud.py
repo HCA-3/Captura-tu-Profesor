@@ -221,3 +221,23 @@ def actualizar_juego(id_juego: int, datos_actualizacion: JuegoCrear) -> Optional
         if juego.get("id") == id_juego:
             indice_juego = i
             break
+        
+        if indice_juego == -1:
+            return None # O lanzar 404
+
+    juego_a_actualizar = _db_juegos[indice_juego]
+
+    # Prevenir actualización de juego eliminado (opcional)
+    # if juego_a_actualizar.get("esta_eliminado"):
+    #     raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No se puede actualizar un juego eliminado.")
+
+
+    # Si se cambia el developer_id, verificar que el nuevo exista y esté activo
+    nuevo_id_desarrollador = datos_actualizacion.desarrollador_id
+    if nuevo_id_desarrollador != juego_a_actualizar.get("desarrollador_id"):
+        nuevo_desarrollador = obtener_desarrollador_activo_por_id(nuevo_id_desarrollador)
+        if not nuevo_desarrollador:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"El nuevo desarrollador con ID {nuevo_id_desarrollador} no existe o no está activo."
+            )
