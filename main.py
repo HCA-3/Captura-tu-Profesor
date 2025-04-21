@@ -162,3 +162,10 @@ def actualizar_desarrollador_existente(id_desarrollador: int, datos_desarrollado
     except Exception as e:
         print(f"Error inesperado al actualizar desarrollador {id_desarrollador}: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error interno al intentar actualizar el desarrollador.")
+
+@app.delete(
+    "/desarrolladores/{id_desarrollador}",
+    response_model=Desarrollador, # Devuelve el objeto marcado como eliminado
+    tags=["Desarrolladores"],
+    summary="Eliminar (lógicamente) un desarrollador"
+    )
