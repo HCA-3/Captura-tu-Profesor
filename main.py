@@ -269,3 +269,10 @@ def leer_juegos(
     except Exception as e:
         print(f"Error inesperado al obtener juegos: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error interno al obtener la lista de juegos.")
+
+@app.get(
+    "/juegos/{id_juego}",
+    response_model=Juego,
+    tags=["Juegos"],
+    summary="Obtener un juego por ID"
+    )
