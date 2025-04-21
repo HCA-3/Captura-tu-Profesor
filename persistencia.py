@@ -46,3 +46,14 @@ datos = []
                 for clave, valor in fila.items():
                     if clave not in nombres_campos: # Ignorar columnas extra no esperadas
                         continue
+                    
+                    if clave in ['id', 'ano_lanzamiento', 'ano_fundacion', 'desarrollador_id']:
+                        fila_procesada[clave] = int(valor) if valor else None
+                    elif clave == 'esta_eliminado':
+                        # Guardamos como 'True'/'False' str, leemos como bool
+                        fila_procesada[clave] = valor.strip().lower() == 'true'
+                    elif clave == 'plataformas':
+                         # Asumiendo que guardamos la lista como string separado por comas
+                        fila_procesada[clave] = [p.strip() for p in valor.split(',') if p.strip()] if valor else []
+                    else:
+                        fila_procesada[clave] = valor if valor else None # Guardar None si está vacío
