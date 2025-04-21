@@ -156,3 +156,17 @@ def obtener_juego_por_id(id_juego: int) -> Optional[Dict[str, Any]]:
         if juego.get("id") == id_juego:
             return juego
     return None
+
+def obtener_juego_activo_por_id(id_juego: int) -> Optional[Dict[str, Any]]:
+    """Busca un juego activo por ID, asegurando que su desarrollador también esté activo."""
+    juego = obtener_juego_por_id(id_juego)
+    if juego and not juego.get("esta_eliminado"):
+        # Validar que el desarrollador asociado exista y esté activo
+        desarrollador = obtener_desarrollador_activo_por_id(juego.get("desarrollador_id"))
+        if desarrollador:
+            return juego
+        else:
+             # El juego existe y no está eliminado, pero su desarrollador sí lo está (o no existe)
+             # Decidimos no retornarlo como "activo" en este caso.
+             return None
+    return None # No encontrado o está eliminado
