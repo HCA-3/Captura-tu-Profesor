@@ -31,3 +31,11 @@ def obtener_desarrollador_por_id(id_desarrollador: int) -> Optional[Dict[str, An
         if dev.get("id") == id_desarrollador:
             return dev
     return None
+
+def obtener_desarrollador_activo_por_id(id_desarrollador: int) -> Optional[Dict[str, Any]]:
+    """Busca un desarrollador activo (no eliminado) por ID."""
+    dev = obtener_desarrollador_por_id(id_desarrollador)
+    # Comprueba que exista y que 'esta_eliminado' sea False o None (consideramos None como no eliminado)
+    if dev and not dev.get("esta_eliminado", False):
+        return dev
+    return None
