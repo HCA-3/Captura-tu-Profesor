@@ -85,3 +85,10 @@ def crear_nuevo_desarrollador(datos_desarrollador: DesarrolladorCrear): # Modelo
         # Captura cualquier otro error inesperado durante la creación/guardado
         print(f"Error inesperado al crear desarrollador: {e}") # Loggear el error
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error interno al intentar crear el desarrollador.")
+
+@app.get(
+    "/desarrolladores/",
+    response_model=List[Desarrollador],
+    tags=["Desarrolladores"],
+    summary="Listar desarrolladores"
+    )
