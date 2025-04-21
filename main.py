@@ -321,3 +321,10 @@ def actualizar_juego_existente(id_juego: int, datos_juego: JuegoCrear):
     except Exception as e:
         print(f"Error inesperado al actualizar juego {id_juego}: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error interno al intentar actualizar el juego.")
+
+@app.delete(
+    "/juegos/{id_juego}",
+    response_model=Juego, # Devuelve el objeto marcado como eliminado
+    tags=["Juegos"],
+    summary="Eliminar (lógicamente) un juego"
+    )
