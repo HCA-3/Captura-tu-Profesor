@@ -110,3 +110,10 @@ def leer_desarrolladores(
     except Exception as e:
         print(f"Error inesperado al obtener desarrolladores: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error interno al obtener la lista de desarrolladores.")
+
+@app.get(
+    "/desarrolladores/{id_desarrollador}",
+    response_model=Desarrollador,
+    tags=["Desarrolladores"],
+    summary="Obtener un desarrollador por ID"
+    )
