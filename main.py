@@ -290,3 +290,9 @@ def leer_juego_por_id(id_juego: int):
             detail=f"Juego con ID {id_juego} no encontrado, inactivo o su desarrollador está inactivo."
         )
     return db_juego
+@app.put(
+    "/juegos/{id_juego}",
+    response_model=Juego,
+    tags=["Juegos"],
+    summary="Actualizar un juego"
+    )
