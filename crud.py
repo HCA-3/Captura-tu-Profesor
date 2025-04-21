@@ -147,3 +147,12 @@ def buscar_desarrolladores_por_nombre(consulta_nombre: str) -> List[Dict[str, An
         if not dev.get("esta_eliminado", False) and consulta in dev.get("nombre", "").lower()
     ]
     return resultados
+
+# --- Operaciones CRUD para Juegos ---
+
+def obtener_juego_por_id(id_juego: int) -> Optional[Dict[str, Any]]:
+    """Busca un juego por ID (incluyendo borrados lógicamente)."""
+    for juego in _db_juegos:
+        if juego.get("id") == id_juego:
+            return juego
+    return None
