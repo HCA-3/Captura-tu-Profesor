@@ -1,1 +1,0 @@
-pygame.surfarray.array_alpha()
