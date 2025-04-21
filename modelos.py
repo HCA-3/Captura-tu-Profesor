@@ -9,3 +9,7 @@ class DesarrolladorBase(BaseModel):
 
 class DesarrolladorCrear(DesarrolladorBase):
     pass # No necesita campos adicionales para la creación
+
+class Desarrollador(DesarrolladorBase):
+    id: int
+    esta_eliminado: bool = False # Para borrado lógico
