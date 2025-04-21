@@ -276,3 +276,17 @@ def leer_juegos(
     tags=["Juegos"],
     summary="Obtener un juego por ID"
     )
+def leer_juego_por_id(id_juego: int):
+    """
+    Obtiene los detalles de un juego específico usando su ID.
+
+    Solo devuelve juegos que **no** estén marcados como eliminados y cuyo
+    desarrollador asociado también esté activo.
+    """
+    db_juego = crud.obtener_juego_activo_por_id(id_juego=id_juego)
+    if db_juego is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Juego con ID {id_juego} no encontrado, inactivo o su desarrollador está inactivo."
+        )
+    return db_juego
