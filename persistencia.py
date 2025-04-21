@@ -15,3 +15,19 @@ os.makedirs(DIRECTORIO_DATOS, exist_ok=True)
 # Definir las cabeceras (fieldnames) para cada CSV EN ESPAÑOL
 CAMPOS_JUEGO = ['id', 'titulo', 'genero', 'plataformas', 'ano_lanzamiento', 'desarrollador_id', 'esta_eliminado']
 CAMPOS_DESARROLLADOR = ['id', 'nombre', 'pais', 'ano_fundacion', 'esta_eliminado']
+
+def _cargar_datos_desde_csv(nombre_archivo: str, nombres_campos: List[str]) -> List[Dict[str, Any]]:
+    """Carga datos desde un archivo CSV."""
+    if not os.path.exists(nombre_archivo):
+        # Si el archivo no existe, lo creamos con las cabeceras
+        try:
+            with open(nombre_archivo, mode='w', newline='', encoding='utf-8') as archivo_csv:
+                escritor = csv.DictWriter(archivo_csv, fieldnames=nombres_campos)
+                escritor.writeheader()
+            return []
+        except IOError as e:
+            print(f"Error: No se pudo crear el archivo CSV inicial {nombre_archivo}: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"No se pudo crear el archivo de datos necesario: {os.path.basename(nombre_archivo)}"
+            ) from e
