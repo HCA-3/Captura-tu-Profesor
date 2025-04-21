@@ -344,3 +344,10 @@ def eliminar_juego_existente(id_juego: int):
             detail=f"No se encontró el juego con ID {id_juego} o ya estaba eliminado."
         )
     return juego_eliminado # Devuelve el objeto con esta_eliminado=True
+
+@app.get(
+    "/juegos/filtrar/por_genero/",
+    response_model=List[Juego],
+    tags=["Juegos"],
+    summary="Filtrar juegos por género"
+    )
