@@ -103,3 +103,9 @@ def _guardar_datos_en_csv(nombre_archivo: str, datos: List[Dict[str, Any]], nomb
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"No se pudo guardar los datos en {os.path.basename(nombre_archivo)}"
         ) from e
+
+# Funciones específicas para cargar/guardar juegos y desarrolladores
+
+def cargar_juegos() -> List[Dict[str, Any]]:
+    """Carga la lista de juegos desde juegos.csv."""
+    return _cargar_datos_desde_csv(ARCHIVO_JUEGOS, CAMPOS_JUEGO)
