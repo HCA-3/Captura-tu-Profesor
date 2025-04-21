@@ -244,3 +244,10 @@ def crear_nuevo_juego(datos_juego: JuegoCrear):
     except Exception as e:
         print(f"Error inesperado al crear juego: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error interno al intentar crear el juego.")
+
+@app.get(
+    "/juegos/",
+    response_model=List[Juego],
+    tags=["Juegos"],
+    summary="Listar juegos"
+    )
