@@ -371,3 +371,38 @@ def filtrar_juegos(
 # --- Mapa de Endpoints (Descripción en Español) ---
 # FastAPI genera automáticamente /docs y /redoc
 # Incluimos el resumen textual solicitado.
+
+DESCRIPCION_MAPA_ENDPOINTS = """
+## Mapa de Endpoints de la API de Videojuegos
+
+A continuación se describen los endpoints disponibles:
+
+**Desarrolladores:**
+
+* **`POST /desarrolladores/`**: Crea un nuevo desarrollador.
+    * *Body (JSON)*: `nombre` (str, req.), `pais` (str, opc.), `ano_fundacion` (int, opc.).
+    * *Respuesta*: JSON del desarrollador creado (incluye `id`, `esta_eliminado=False`). Status 201.
+    * *Errores*: 409 (Conflicto si nombre ya existe), 422 (Validación), 500 (Interno).
+* **`GET /desarrolladores/`**: Lista desarrolladores (paginado).
+    * *Query Params*: `saltar` (int, def 0), `limite` (int, def 10), `incluir_eliminados` (bool, def False).
+    * *Respuesta*: Lista [JSON] de desarrolladores. Status 200.
+    * *Errores*: 500 (Interno).
+* **`GET /desarrolladores/{id_desarrollador}`**: Obtiene un desarrollador activo por ID.
+    * *Path Param*: `id_desarrollador` (int).
+    * *Respuesta*: JSON del desarrollador. Status 200.
+    * *Errores*: 404 (No encontrado o inactivo), 422 (ID inválido).
+* **`PUT /desarrolladores/{id_desarrollador}`**: Actualiza un desarrollador por ID.
+    * *Path Param*: `id_desarrollador` (int).
+    * *Body (JSON)*: Campos a actualizar (`nombre`, `pais`, `ano_fundacion`).
+    * *Respuesta*: JSON del desarrollador actualizado. Status 200.
+    * *Errores*: 404 (No encontrado), 409 (Conflicto de nombre), 422 (Validación), 500 (Interno).
+* **`DELETE /desarrolladores/{id_desarrollador}`**: Marca un desarrollador como eliminado (borrado lógico).
+    * *Path Param*: `id_desarrollador` (int).
+    * *Respuesta*: JSON del desarrollador con `esta_eliminado=True`. Status 200.
+    * *Errores*: 404 (No encontrado o ya eliminado), 422 (ID inválido).
+* **`GET /desarrolladores/buscar/por_nombre/`**: Busca desarrolladores activos por nombre.
+    * *Query Param*: `consulta_nombre` (str, req.).
+    * *Respuesta*: Lista [JSON] de desarrolladores coincidentes. Status 200.
+    * *Errores*: 422 (Query param faltante/inválido), 500 (Interno).
+
+**Juegos:**
