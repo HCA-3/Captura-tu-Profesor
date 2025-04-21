@@ -1,3 +1,4 @@
+# main.py
 from fastapi import FastAPI, HTTPException, Depends, status, Query
 from typing import List, Optional
 
@@ -25,7 +26,7 @@ async def manejador_excepciones_generico(request, exc: Exception):
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         content={"detail": "Ocurrió un error interno inesperado en el servidor."},
     )
-    
+
 # --- Endpoints para Desarrolladores ---
 
 @app.post(
@@ -35,7 +36,6 @@ async def manejador_excepciones_generico(request, exc: Exception):
     tags=["Desarrolladores"],
     summary="Crear un nuevo desarrollador" # Título corto para la UI de Docs
     )
-
 def crear_nuevo_desarrollador(datos_desarrollador: DesarrolladorCrear): # Modelo de entrada en español
     """
     Crea un nuevo desarrollador en la base de datos (archivo CSV).
@@ -61,30 +61,6 @@ def crear_nuevo_desarrollador(datos_desarrollador: DesarrolladorCrear): # Modelo
         print(f"Error inesperado al crear desarrollador: {e}") # Loggear el error
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error interno al intentar crear el desarrollador.")
 
-def crear_nuevo_desarrollador(datos_desarrollador: DesarrolladorCrear): # Modelo de entrada en español
-    """
-    Crea un nuevo desarrollador en la base de datos (archivo CSV).
-
-    - **datos_desarrollador**: JSON con los datos del desarrollador.
-        - `nombre` (str): Requerido.
-        - `pais` (str, opcional): País de origen.
-        - `ano_fundacion` (int, opcional): Año de fundación.
-    \f
-    :param datos_desarrollador: Datos Pydantic validados.
-    :return: El objeto Desarrollador creado.
-    :raises HTTPException 409: Si ya existe un desarrollador activo con ese nombre.
-    :raises HTTPException 500: Si ocurre un error interno al guardar.
-    """
-    try:
-        # La función crud ya maneja la lógica y la excepción 409
-        nuevo_dev = crud.crear_desarrollador(datos_desarrollador=datos_desarrollador)
-        return nuevo_dev
-    except HTTPException as http_exc:
-        raise http_exc # Re-lanzar excepciones HTTP específicas (409, 400, etc.)
-    except Exception as e:
-        # Captura cualquier otro error inesperado durante la creación/guardado
-        print(f"Error inesperado al crear desarrollador: {e}") # Loggear el error
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error interno al intentar crear el desarrollador.")
 
 @app.get(
     "/desarrolladores/",
@@ -92,7 +68,6 @@ def crear_nuevo_desarrollador(datos_desarrollador: DesarrolladorCrear): # Modelo
     tags=["Desarrolladores"],
     summary="Listar desarrolladores"
     )
-
 def leer_desarrolladores(
     saltar: int = 0,
     limite: int = 10,
@@ -111,13 +86,13 @@ def leer_desarrolladores(
         print(f"Error inesperado al obtener desarrolladores: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error interno al obtener la lista de desarrolladores.")
 
+
 @app.get(
     "/desarrolladores/{id_desarrollador}",
     response_model=Desarrollador,
     tags=["Desarrolladores"],
     summary="Obtener un desarrollador por ID"
     )
-
 def leer_desarrollador_por_id(id_desarrollador: int):
     """
     Obtiene los detalles de un desarrollador específico usando su ID.
@@ -138,7 +113,6 @@ def leer_desarrollador_por_id(id_desarrollador: int):
     tags=["Desarrolladores"],
     summary="Actualizar un desarrollador"
     )
-
 def actualizar_desarrollador_existente(id_desarrollador: int, datos_desarrollador: DesarrolladorCrear):
     """
     Actualiza la información de un desarrollador existente.
@@ -163,13 +137,13 @@ def actualizar_desarrollador_existente(id_desarrollador: int, datos_desarrollado
         print(f"Error inesperado al actualizar desarrollador {id_desarrollador}: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error interno al intentar actualizar el desarrollador.")
 
+
 @app.delete(
     "/desarrolladores/{id_desarrollador}",
     response_model=Desarrollador, # Devuelve el objeto marcado como eliminado
     tags=["Desarrolladores"],
     summary="Eliminar (lógicamente) un desarrollador"
     )
-
 def eliminar_desarrollador_existente(id_desarrollador: int):
     """
     Marca un desarrollador como eliminado (borrado lógico).
@@ -187,13 +161,13 @@ def eliminar_desarrollador_existente(id_desarrollador: int):
     # Devuelve el objeto marcado como eliminado (contiene esta_eliminado=True)
     return desarrollador_eliminado
 
+
 @app.get(
     "/desarrolladores/buscar/por_nombre/",
     response_model=List[Desarrollador],
     tags=["Desarrolladores"],
     summary="Buscar desarrolladores por nombre"
     )
-
 def buscar_desarrolladores(
     consulta_nombre: str = Query(..., min_length=1, description="Texto a buscar en el nombre del desarrollador (búsqueda parcial, insensible a mayúsculas)")
     ):
@@ -209,6 +183,7 @@ def buscar_desarrolladores(
         print(f"Error inesperado buscando desarrolladores por nombre: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error interno durante la búsqueda de desarrolladores.")
 
+
 # --- Endpoints para Juegos ---
 
 @app.post(
@@ -218,7 +193,6 @@ def buscar_desarrolladores(
     tags=["Juegos"],
     summary="Crear un nuevo juego"
     )
-
 def crear_nuevo_juego(datos_juego: JuegoCrear):
     """
     Crea un nuevo juego asociado a un desarrollador existente y activo.
@@ -245,13 +219,13 @@ def crear_nuevo_juego(datos_juego: JuegoCrear):
         print(f"Error inesperado al crear juego: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error interno al intentar crear el juego.")
 
+
 @app.get(
     "/juegos/",
     response_model=List[Juego],
     tags=["Juegos"],
     summary="Listar juegos"
     )
-
 def leer_juegos(
     saltar: int = 0,
     limite: int = 10,
@@ -269,6 +243,7 @@ def leer_juegos(
     except Exception as e:
         print(f"Error inesperado al obtener juegos: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error interno al obtener la lista de juegos.")
+
 
 @app.get(
     "/juegos/{id_juego}",
@@ -290,13 +265,13 @@ def leer_juego_por_id(id_juego: int):
             detail=f"Juego con ID {id_juego} no encontrado, inactivo o su desarrollador está inactivo."
         )
     return db_juego
+
 @app.put(
     "/juegos/{id_juego}",
     response_model=Juego,
     tags=["Juegos"],
     summary="Actualizar un juego"
     )
-
 def actualizar_juego_existente(id_juego: int, datos_juego: JuegoCrear):
     """
     Actualiza la información de un juego existente.
@@ -322,13 +297,13 @@ def actualizar_juego_existente(id_juego: int, datos_juego: JuegoCrear):
         print(f"Error inesperado al actualizar juego {id_juego}: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error interno al intentar actualizar el juego.")
 
+
 @app.delete(
     "/juegos/{id_juego}",
     response_model=Juego, # Devuelve el objeto marcado como eliminado
     tags=["Juegos"],
     summary="Eliminar (lógicamente) un juego"
     )
-
 def eliminar_juego_existente(id_juego: int):
     """
     Marca un juego como eliminado (borrado lógico).
@@ -351,7 +326,6 @@ def eliminar_juego_existente(id_juego: int):
     tags=["Juegos"],
     summary="Filtrar juegos por género"
     )
-
 def filtrar_juegos(
     genero: str = Query(..., min_length=1, description="Género por el cual filtrar (búsqueda parcial, insensible a mayúsculas)")
     ):
