@@ -213,3 +213,11 @@ def crear_juego(datos_juego: JuegoCrear) -> Dict[str, Any]:
     _db_juegos.append(nuevo_juego_dict)
     guardar_juegos(_db_juegos) # Persistir
     return nuevo_juego_dict
+
+def actualizar_juego(id_juego: int, datos_actualizacion: JuegoCrear) -> Optional[Dict[str, Any]]:
+    """Actualiza un juego existente."""
+    indice_juego = -1
+    for i, juego in enumerate(_db_juegos):
+        if juego.get("id") == id_juego:
+            indice_juego = i
+            break
