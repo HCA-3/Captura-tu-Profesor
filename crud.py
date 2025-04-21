@@ -117,3 +117,19 @@ if indice_desarrollador == -1:
     _db_desarrolladores[indice_desarrollador] = desarrollador_a_actualizar
     guardar_desarrolladores(_db_desarrolladores) # Persistir cambio
     return desarrollador_a_actualizar
+
+def eliminar_logico_desarrollador(id_desarrollador: int) -> Optional[Dict[str, Any]]:
+    """Marca un desarrollador como eliminado (borrado lógico)."""
+    desarrollador = obtener_desarrollador_por_id(id_desarrollador)
+
+    # Si no existe o ya está borrado, no hacer nada (o devolver error si se prefiere)
+    if desarrollador is None or desarrollador.get("esta_eliminado"):
+        return None # El endpoint manejará el 404
+
+    # Marcar como eliminado
+    desarrollador['esta_eliminado'] = True
+
+    # Consideración: ¿Qué pasa con los juegos de este desarrollador?
+    # Podrían marcarse como "huérfanos", eliminarse también, o dejarse tal cual.
+    # Por simplicidad, aquí solo marcamos el desarrollador. Los endpoints GET de juegos
+    # ya filtran por desarrollador activo por defecto.
