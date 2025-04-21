@@ -434,3 +434,23 @@ A continuación se describen los endpoints disponibles:
     * *Errores*: 422 (Query param faltante/inválido), 500 (Interno).
 
 """
+
+@app.get("/", include_in_schema=False) # Endpoint raíz simple
+async def raiz():
+    # Mensaje de bienvenida y dirige a la documentación automática
+    return {"mensaje": "¡Bienvenido/a a la API de Videojuegos! Consulta el mapa de endpoints interactivo en /docs"}
+
+# --- Ejecución del Servidor (para desarrollo) ---
+if __name__ == "__main__":
+    import uvicorn
+    # Imprimir mapa de endpoints en consola al iniciar (opcional)
+    print("\n" + "="*30 + " MAPA DE ENDPOINTS " + "="*30)
+    print(DESCRIPCION_MAPA_ENDPOINTS)
+    print("="*80)
+    print("Iniciando servidor Uvicorn en http://127.0.0.1:8000")
+    print("Accede a la documentación interactiva (Swagger UI) en http://127.0.0.1:8000/docs")
+    print("Accede a la documentación alternativa (ReDoc) en http://127.0.0.1:8000/redoc")
+    print("="*80)
+    # Ejecuta el servidor con Uvicorn, habilitando recarga automática para desarrollo
+    # Asegúrate de que el nombre del archivo y el objeto app coincidan ('main:app')
+    uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)
