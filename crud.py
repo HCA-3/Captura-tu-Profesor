@@ -272,3 +272,9 @@ def filtrar_juegos_por_genero(genero: str) -> List[Dict[str, Any]]:
     # cuyo desarrollador también esté activo. Es menos eficiente si hay muchos juegos.
     # Alternativa: filtrar _db_juegos directamente y luego verificar desarrollador activo.
     juegos_activos = obtener_juegos(limite=len(_db_juegos), incluir_eliminados=False) # Obtener todos los activos
+
+resultados = [
+        juego for juego in juegos_activos
+        if consulta_genero in juego.get("genero", "").lower()
+    ]
+    return resultados
