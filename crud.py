@@ -241,3 +241,9 @@ def actualizar_juego(id_juego: int, datos_actualizacion: JuegoCrear) -> Optional
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"El nuevo desarrollador con ID {nuevo_id_desarrollador} no existe o no está activo."
             )
+            
+             # Aplicar actualizaciones de campos permitidos
+    datos_nuevos = datos_actualizacion.dict(exclude_unset=True)
+    for clave, valor in datos_nuevos.items():
+         if clave in JuegoBase.__fields__: # Actualizar solo campos del modelo base
+              juego_a_actualizar[clave] = valor
