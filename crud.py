@@ -105,3 +105,15 @@ if indice_desarrollador == -1:
                     status_code=status.HTTP_409_CONFLICT,
                     detail=f"Ya existe otro desarrollador activo con el nombre '{datos_nuevos['nombre']}'."
                 )
+
+# Aplicar actualizaciones
+    for clave, valor in datos_nuevos.items():
+        # Solo actualiza campos que existen en el modelo base/original
+        # y evita actualizar 'id' o 'esta_eliminado' directamente aquí
+        if clave in DesarrolladorBase.__fields__:
+             desarrollador_a_actualizar[clave] = valor
+
+    # Actualizar en la lista "en memoria"
+    _db_desarrolladores[indice_desarrollador] = desarrollador_a_actualizar
+    guardar_desarrolladores(_db_desarrolladores) # Persistir cambio
+    return desarrollador_a_actualizar
