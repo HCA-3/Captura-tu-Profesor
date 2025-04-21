@@ -13,3 +13,7 @@ class DesarrolladorCrear(DesarrolladorBase):
 class Desarrollador(DesarrolladorBase):
     id: int
     esta_eliminado: bool = False # Para borrado lógico
+    
+ class Config:
+        orm_mode = True # Permite compatibilidad con ORMs, útil aquí para estructura
+        allow_population_by_field_name = True # Permite usar 'ano_fundacion' en lugar de 'ano_fundacion' si es necesario
