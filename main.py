@@ -193,3 +193,18 @@ def eliminar_desarrollador_existente(id_desarrollador: int):
     tags=["Desarrolladores"],
     summary="Buscar desarrolladores por nombre"
     )
+
+def buscar_desarrolladores(
+    consulta_nombre: str = Query(..., min_length=1, description="Texto a buscar en el nombre del desarrollador (búsqueda parcial, insensible a mayúsculas)")
+    ):
+    """
+    Busca desarrolladores activos cuyo nombre contenga el texto proporcionado.
+
+    Endpoint de ejemplo para búsqueda por un atributo diferente al ID.
+    """
+    try:
+        desarrolladores = crud.buscar_desarrolladores_por_nombre(consulta_nombre=consulta_nombre)
+        return desarrolladores
+    except Exception as e:
+        print(f"Error inesperado buscando desarrolladores por nombre: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error interno durante la búsqueda de desarrolladores.")
