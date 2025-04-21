@@ -261,3 +261,14 @@ def eliminar_logico_juego(id_juego: int) -> Optional[Dict[str, Any]]:
     juego['esta_eliminado'] = True
     guardar_juegos(_db_juegos) # Persistir
     return juego
+
+def filtrar_juegos_por_genero(genero: str) -> List[Dict[str, Any]]:
+    """Filtra juegos activos por género (insensible a mayúsculas, búsqueda parcial)."""
+    consulta_genero = genero.strip().lower()
+    if not consulta_genero:
+        return []
+
+    # Usamos obtener_juegos() para asegurarnos de que solo trabajamos con juegos activos
+    # cuyo desarrollador también esté activo. Es menos eficiente si hay muchos juegos.
+    # Alternativa: filtrar _db_juegos directamente y luego verificar desarrollador activo.
+    juegos_activos = obtener_juegos(limite=len(_db_juegos), incluir_eliminados=False) # Obtener todos los activos
