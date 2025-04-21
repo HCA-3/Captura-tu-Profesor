@@ -8,3 +8,5 @@ def obtener_siguiente_id() -> int:
     global _ultimo_id
     _ultimo_id += 1
     return _ultimo_id
+
+a
