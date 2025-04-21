@@ -133,3 +133,17 @@ def eliminar_logico_desarrollador(id_desarrollador: int) -> Optional[Dict[str, A
     # Podrían marcarse como "huérfanos", eliminarse también, o dejarse tal cual.
     # Por simplicidad, aquí solo marcamos el desarrollador. Los endpoints GET de juegos
     # ya filtran por desarrollador activo por defecto.
+    
+     guardar_desarrolladores(_db_desarrolladores) # Persistir el cambio
+    return desarrollador # Devolvemos el desarrollador marcado como borrado
+
+def buscar_desarrolladores_por_nombre(consulta_nombre: str) -> List[Dict[str, Any]]:
+    """Busca desarrolladores activos por nombre (búsqueda parcial, insensible a mayúsculas)."""
+    consulta = consulta_nombre.strip().lower()
+    if not consulta: # Evitar búsqueda vacía
+        return []
+    resultados = [
+        dev for dev in _db_desarrolladores
+        if not dev.get("esta_eliminado", False) and consulta in dev.get("nombre", "").lower()
+    ]
+    return resultados
