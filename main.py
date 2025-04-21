@@ -138,3 +138,27 @@ def leer_desarrollador_por_id(id_desarrollador: int):
     tags=["Desarrolladores"],
     summary="Actualizar un desarrollador"
     )
+
+def actualizar_desarrollador_existente(id_desarrollador: int, datos_desarrollador: DesarrolladorCrear):
+    """
+    Actualiza la información de un desarrollador existente.
+
+    Permite modificar nombre, país y año de fundación.
+    Verifica conflictos si se cambia el nombre.
+    """
+    try:
+        desarrollador_actualizado = crud.actualizar_desarrollador(
+            id_desarrollador=id_desarrollador,
+            datos_actualizacion=datos_desarrollador
+        )
+        if desarrollador_actualizado is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"No se encontró el desarrollador con ID {id_desarrollador} para actualizar."
+            )
+        return desarrollador_actualizado
+    except HTTPException as http_exc:
+        raise http_exc # Re-lanzar 409 (conflicto nombre) u otros errores HTTP
+    except Exception as e:
+        print(f"Error inesperado al actualizar desarrollador {id_desarrollador}: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error interno al intentar actualizar el desarrollador.")
