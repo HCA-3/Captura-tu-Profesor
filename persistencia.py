@@ -109,3 +109,7 @@ def _guardar_datos_en_csv(nombre_archivo: str, datos: List[Dict[str, Any]], nomb
 def cargar_juegos() -> List[Dict[str, Any]]:
     """Carga la lista de juegos desde juegos.csv."""
     return _cargar_datos_desde_csv(ARCHIVO_JUEGOS, CAMPOS_JUEGO)
+
+def guardar_juegos(juegos: List[Dict[str, Any]]):
+    """Guarda la lista de juegos en juegos.csv."""
+    _guardar_datos_en_csv(ARCHIVO_JUEGOS, juegos, CAMPOS_JUEGO)
