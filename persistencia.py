@@ -31,3 +31,12 @@ def _cargar_datos_desde_csv(nombre_archivo: str, nombres_campos: List[str]) -> L
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"No se pudo crear el archivo de datos necesario: {os.path.basename(nombre_archivo)}"
             ) from e
+
+datos = []
+    try:
+        with open(nombre_archivo, mode='r', newline='', encoding='utf-8') as archivo_csv:
+            lector = csv.DictReader(archivo_csv)
+            # Validación simple de cabeceras (podría ser más robusta)
+            if not lector.fieldnames or set(lector.fieldnames) != set(nombres_campos):
+                 print(f"Advertencia: Las cabeceras del CSV {nombre_archivo} no coinciden o están vacías. Esperadas: {nombres_campos}, Encontradas: {lector.fieldnames}. Se intentará continuar.")
+                 
