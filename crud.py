@@ -49,3 +49,16 @@ def obtener_desarrolladores(saltar: int = 0, limite: int = 100, incluir_eliminad
         resultados = [dev for dev in _db_desarrolladores if not dev.get("esta_eliminado", False)]
     # Aplica paginación
     return resultados[saltar : saltar + limite]
+
+def crear_desarrollador(datos_desarrollador: DesarrolladorCrear) -> Dict[str, Any]:
+    """Crea un nuevo desarrollador."""
+    nuevo_id = obtener_siguiente_id()
+
+    # Verificar si ya existe un desarrollador activo con el mismo nombre (insensible a mayúsculas)
+    nombre_nuevo = datos_desarrollador.nombre.strip().lower()
+    existente = next((d for d in _db_desarrolladores if d.get("nombre", "").strip().lower() == nombre_nuevo and not d.get("esta_eliminado")), None)
+    if existente:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Ya existe un desarrollador activo con el nombre '{datos_desarrollador.nombre}'."
+        )
