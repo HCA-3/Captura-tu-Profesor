@@ -76,3 +76,30 @@ datos = []
             detail=f"No se pudo cargar los datos desde {os.path.basename(nombre_archivo)}"
         ) from e
     return datos
+
+def _guardar_datos_en_csv(nombre_archivo: str, datos: List[Dict[str, Any]], nombres_campos: List[str]):
+    """Guarda datos en un archivo CSV."""
+    try:
+        with open(nombre_archivo, mode='w', newline='', encoding='utf-8') as archivo_csv:
+            escritor = csv.DictWriter(archivo_csv, fieldnames=nombres_campos, extrasaction='ignore') # Ignora claves extras en el dict
+            escritor.writeheader()
+            for item in datos:
+                # Preparar fila asegurando el formato correcto para CSV
+                fila_a_escribir = {}
+                for campo in nombres_campos:
+                    valor = item.get(campo)
+                    if campo == 'plataformas' and isinstance(valor, list):
+                        fila_a_escribir[campo] = ','.join(valor) # Convertir lista a string CSV
+                    elif campo == 'esta_eliminado':
+                         # Guardar booleano como 'True' o 'False'
+                        fila_a_escribir[campo] = str(bool(valor))
+                    else:
+                        fila_a_escribir[campo] = valor if valor is not None else '' # Guardar vacío si es None
+
+                escritor.writerow(fila_a_escribir)
+    except IOError as e:
+        print(f"Error al escribir en el archivo CSV {nombre_archivo}: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"No se pudo guardar los datos en {os.path.basename(nombre_archivo)}"
+        ) from e
