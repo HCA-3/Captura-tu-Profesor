@@ -39,3 +39,13 @@ def obtener_desarrollador_activo_por_id(id_desarrollador: int) -> Optional[Dict[
     if dev and not dev.get("esta_eliminado", False):
         return dev
     return None
+
+def obtener_desarrolladores(saltar: int = 0, limite: int = 100, incluir_eliminados: bool = False) -> List[Dict[str, Any]]:
+    """Obtiene una lista de desarrolladores (opcionalmente incluye borrados)."""
+    if incluir_eliminados:
+        resultados = _db_desarrolladores
+    else:
+        # Filtra para obtener solo los activos
+        resultados = [dev for dev in _db_desarrolladores if not dev.get("esta_eliminado", False)]
+    # Aplica paginación
+    return resultados[saltar : saltar + limite]
