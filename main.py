@@ -296,3 +296,28 @@ def leer_juego_por_id(id_juego: int):
     tags=["Juegos"],
     summary="Actualizar un juego"
     )
+
+def actualizar_juego_existente(id_juego: int, datos_juego: JuegoCrear):
+    """
+    Actualiza la información de un juego existente.
+
+    Permite modificar todos los campos base. Si se cambia el `desarrollador_id`,
+    se valida que el nuevo ID corresponda a un desarrollador activo.
+    """
+    try:
+        juego_actualizado = crud.actualizar_juego(
+            id_juego=id_juego,
+            datos_actualizacion=datos_juego
+        )
+        if juego_actualizado is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"No se encontró el juego con ID {id_juego} para actualizar."
+            )
+        # La excepción 400 por desarrollador inválido se maneja en crud.actualizar_juego
+        return juego_actualizado
+    except HTTPException as http_exc:
+        raise http_exc # Re-lanzar 400, 404 u otros errores HTTP
+    except Exception as e:
+        print(f"Error inesperado al actualizar juego {id_juego}: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error interno al intentar actualizar el juego.")
