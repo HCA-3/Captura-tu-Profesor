@@ -62,3 +62,17 @@ datos = []
                 for campo_esperado in nombres_campos:
                     if campo_esperado not in fila_procesada:
                          fila_procesada[campo_esperado] = None
+                         
+                datos.append(fila_procesada)
+
+    except FileNotFoundError:
+        # Esto no debería pasar por la comprobación inicial, pero por si acaso
+        return []
+    except Exception as e:
+        # Manejo de errores genérico al leer CSV
+        print(f"Error al leer el archivo CSV {nombre_archivo}: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"No se pudo cargar los datos desde {os.path.basename(nombre_archivo)}"
+        ) from e
+    return datos
