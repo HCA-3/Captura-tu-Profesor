@@ -406,3 +406,31 @@ A continuación se describen los endpoints disponibles:
     * *Errores*: 422 (Query param faltante/inválido), 500 (Interno).
 
 **Juegos:**
+
+* **`POST /juegos/`**: Crea un nuevo juego.
+    * *Body (JSON)*: `titulo`(str, req.), `genero`(str, req.), `plataformas`(List[str]), `ano_lanzamiento`(int, opc.), `desarrollador_id`(int, req., debe ser activo).
+    * *Respuesta*: JSON del juego creado (incluye `id`, `esta_eliminado=False`). Status 201.
+    * *Errores*: 400 (Desarrollador no encontrado/inactivo), 422 (Validación), 500 (Interno).
+* **`GET /juegos/`**: Lista juegos (paginado). Por defecto, solo activos con desarrollador activo.
+    * *Query Params*: `saltar` (int, def 0), `limite` (int, def 10), `incluir_eliminados` (bool, def False).
+    * *Respuesta*: Lista [JSON] de juegos. Status 200.
+    * *Errores*: 500 (Interno).
+* **`GET /juegos/{id_juego}`**: Obtiene un juego activo por ID (con desarrollador activo).
+    * *Path Param*: `id_juego` (int).
+    * *Respuesta*: JSON del juego. Status 200.
+    * *Errores*: 404 (No encontrado, inactivo o desarrollador inactivo), 422 (ID inválido).
+* **`PUT /juegos/{id_juego}`**: Actualiza un juego por ID.
+    * *Path Param*: `id_juego` (int).
+    * *Body (JSON)*: Campos a actualizar. Si cambia `desarrollador_id`, debe ser válido/activo.
+    * *Respuesta*: JSON del juego actualizado. Status 200.
+    * *Errores*: 404 (Juego no encontrado), 400 (Nuevo desarrollador inválido/inactivo), 422 (Validación), 500 (Interno).
+* **`DELETE /juegos/{id_juego}`**: Marca un juego como eliminado (borrado lógico).
+    * *Path Param*: `id_juego` (int).
+    * *Respuesta*: JSON del juego con `esta_eliminado=True`. Status 200.
+    * *Errores*: 404 (No encontrado o ya eliminado), 422 (ID inválido).
+* **`GET /juegos/filtrar/por_genero/`**: Filtra juegos activos por género.
+    * *Query Param*: `genero` (str, req.).
+    * *Respuesta*: Lista [JSON] de juegos activos coincidentes. Status 200.
+    * *Errores*: 422 (Query param faltante/inválido), 500 (Interno).
+
+"""
