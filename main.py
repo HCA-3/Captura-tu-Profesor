@@ -92,3 +92,21 @@ def crear_nuevo_desarrollador(datos_desarrollador: DesarrolladorCrear): # Modelo
     tags=["Desarrolladores"],
     summary="Listar desarrolladores"
     )
+
+def leer_desarrolladores(
+    saltar: int = 0,
+    limite: int = 10,
+    incluir_eliminados: bool = Query(False, description="Incluir desarrolladores marcados como eliminados en la lista")
+    ):
+    """
+    Obtiene una lista paginada de desarrolladores.
+
+    Permite incluir opcionalmente los desarrolladores marcados como eliminados
+    para propósitos de trazabilidad o administración.
+    """
+    try:
+        desarrolladores = crud.obtener_desarrolladores(saltar=saltar, limite=limite, incluir_eliminados=incluir_eliminados)
+        return desarrolladores
+    except Exception as e:
+        print(f"Error inesperado al obtener desarrolladores: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error interno al obtener la lista de desarrolladores.")
