@@ -40,3 +40,9 @@ datos = []
             if not lector.fieldnames or set(lector.fieldnames) != set(nombres_campos):
                  print(f"Advertencia: Las cabeceras del CSV {nombre_archivo} no coinciden o están vacías. Esperadas: {nombres_campos}, Encontradas: {lector.fieldnames}. Se intentará continuar.")
                  
+            for fila in lector:
+                # Convertir tipos de datos y manejar posibles valores faltantes o incorrectos
+                fila_procesada = {}
+                for clave, valor in fila.items():
+                    if clave not in nombres_campos: # Ignorar columnas extra no esperadas
+                        continue
