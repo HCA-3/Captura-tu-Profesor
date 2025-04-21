@@ -131,3 +131,10 @@ def leer_desarrollador_por_id(id_desarrollador: int):
             detail=f"El desarrollador con ID {id_desarrollador} no fue encontrado o está inactivo."
         )
     return db_desarrollador
+
+@app.put(
+    "/desarrolladores/{id_desarrollador}",
+    response_model=Desarrollador,
+    tags=["Desarrolladores"],
+    summary="Actualizar un desarrollador"
+    )
