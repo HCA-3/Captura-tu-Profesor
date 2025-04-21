@@ -62,8 +62,8 @@ def crear_desarrollador(datos_desarrollador: DesarrolladorCrear) -> Dict[str, An
             status_code=status.HTTP_409_CONFLICT,
             detail=f"Ya existe un desarrollador activo con el nombre '{datos_desarrollador.nombre}'."
         )
-        
-         # Crea el diccionario de datos para el nuevo desarrollador
+
+    # Crea el diccionario de datos para el nuevo desarrollador
     nuevo_desarrollador_dict = Desarrollador(
         id=nuevo_id,
         esta_eliminado=False,
@@ -81,8 +81,8 @@ def actualizar_desarrollador(id_desarrollador: int, datos_actualizacion: Desarro
         if dev.get("id") == id_desarrollador:
             indice_desarrollador = i
             break
-        
-if indice_desarrollador == -1:
+
+    if indice_desarrollador == -1:
         return None # O podríamos lanzar 404 aquí directamente
 
     desarrollador_a_actualizar = _db_desarrolladores[indice_desarrollador]
@@ -106,7 +106,7 @@ if indice_desarrollador == -1:
                     detail=f"Ya existe otro desarrollador activo con el nombre '{datos_nuevos['nombre']}'."
                 )
 
-# Aplicar actualizaciones
+    # Aplicar actualizaciones
     for clave, valor in datos_nuevos.items():
         # Solo actualiza campos que existen en el modelo base/original
         # y evita actualizar 'id' o 'esta_eliminado' directamente aquí
@@ -133,8 +133,8 @@ def eliminar_logico_desarrollador(id_desarrollador: int) -> Optional[Dict[str, A
     # Podrían marcarse como "huérfanos", eliminarse también, o dejarse tal cual.
     # Por simplicidad, aquí solo marcamos el desarrollador. Los endpoints GET de juegos
     # ya filtran por desarrollador activo por defecto.
-    
-     guardar_desarrolladores(_db_desarrolladores) # Persistir el cambio
+
+    guardar_desarrolladores(_db_desarrolladores) # Persistir el cambio
     return desarrollador # Devolvemos el desarrollador marcado como borrado
 
 def buscar_desarrolladores_por_nombre(consulta_nombre: str) -> List[Dict[str, Any]]:
@@ -193,6 +193,7 @@ def obtener_juegos(saltar: int = 0, limite: int = 100, incluir_eliminados: bool 
     # Aplicar paginación a los resultados filtrados
     return juegos_filtrados[saltar : saltar + limite]
 
+
 def crear_juego(datos_juego: JuegoCrear) -> Dict[str, Any]:
     """Crea un nuevo juego."""
     # Verificar que el desarrollador exista y esté activo
@@ -221,9 +222,9 @@ def actualizar_juego(id_juego: int, datos_actualizacion: JuegoCrear) -> Optional
         if juego.get("id") == id_juego:
             indice_juego = i
             break
-        
-        if indice_juego == -1:
-            return None # O lanzar 404
+
+    if indice_juego == -1:
+        return None # O lanzar 404
 
     juego_a_actualizar = _db_juegos[indice_juego]
 
@@ -241,14 +242,14 @@ def actualizar_juego(id_juego: int, datos_actualizacion: JuegoCrear) -> Optional
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"El nuevo desarrollador con ID {nuevo_id_desarrollador} no existe o no está activo."
             )
-            
-             # Aplicar actualizaciones de campos permitidos
+
+    # Aplicar actualizaciones de campos permitidos
     datos_nuevos = datos_actualizacion.dict(exclude_unset=True)
     for clave, valor in datos_nuevos.items():
          if clave in JuegoBase.__fields__: # Actualizar solo campos del modelo base
               juego_a_actualizar[clave] = valor
 
- _db_juegos[indice_juego] = juego_a_actualizar
+    _db_juegos[indice_juego] = juego_a_actualizar
     guardar_juegos(_db_juegos) # Persistir
     return juego_a_actualizar
 
@@ -273,7 +274,7 @@ def filtrar_juegos_por_genero(genero: str) -> List[Dict[str, Any]]:
     # Alternativa: filtrar _db_juegos directamente y luego verificar desarrollador activo.
     juegos_activos = obtener_juegos(limite=len(_db_juegos), incluir_eliminados=False) # Obtener todos los activos
 
-resultados = [
+    resultados = [
         juego for juego in juegos_activos
         if consulta_genero in juego.get("genero", "").lower()
     ]
