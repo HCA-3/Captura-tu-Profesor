@@ -251,3 +251,21 @@ def crear_nuevo_juego(datos_juego: JuegoCrear):
     tags=["Juegos"],
     summary="Listar juegos"
     )
+
+def leer_juegos(
+    saltar: int = 0,
+    limite: int = 10,
+    incluir_eliminados: bool = Query(False, description="Incluir juegos marcados como eliminados o cuyo desarrollador esté eliminado")
+    ):
+    """
+    Obtiene una lista paginada de juegos.
+
+    Por defecto, solo muestra juegos activos cuyo desarrollador asociado también esté activo.
+    La opción `incluir_eliminados` permite ver todos los juegos registrados.
+    """
+    try:
+        juegos = crud.obtener_juegos(saltar=saltar, limite=limite, incluir_eliminados=incluir_eliminados)
+        return juegos
+    except Exception as e:
+        print(f"Error inesperado al obtener juegos: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error interno al obtener la lista de juegos.")
