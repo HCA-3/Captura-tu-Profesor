@@ -25,3 +25,13 @@ async def manejador_excepciones_generico(request, exc: Exception):
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         content={"detail": "Ocurrió un error interno inesperado en el servidor."},
     )
+    
+# --- Endpoints para Desarrolladores ---
+
+@app.post(
+    "/desarrolladores/",
+    response_model=Desarrollador, # Modelo de respuesta en español
+    status_code=status.HTTP_201_CREATED,
+    tags=["Desarrolladores"],
+    summary="Crear un nuevo desarrollador" # Título corto para la UI de Docs
+    )
