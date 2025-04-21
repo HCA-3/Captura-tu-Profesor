@@ -208,3 +208,13 @@ def buscar_desarrolladores(
     except Exception as e:
         print(f"Error inesperado buscando desarrolladores por nombre: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error interno durante la búsqueda de desarrolladores.")
+
+# --- Endpoints para Juegos ---
+
+@app.post(
+    "/juegos/",
+    response_model=Juego,
+    status_code=status.HTTP_201_CREATED,
+    tags=["Juegos"],
+    summary="Crear un nuevo juego"
+    )
