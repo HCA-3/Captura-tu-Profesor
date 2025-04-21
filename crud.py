@@ -170,3 +170,25 @@ def obtener_juego_activo_por_id(id_juego: int) -> Optional[Dict[str, Any]]:
              # Decidimos no retornarlo como "activo" en este caso.
              return None
     return None # No encontrado o está eliminado
+
+def obtener_juegos(saltar: int = 0, limite: int = 100, incluir_eliminados: bool = False) -> List[Dict[str, Any]]:
+    """Obtiene una lista de juegos. Por defecto, solo activos con desarrollador activo."""
+
+    juegos_filtrados = []
+    # Optimización: obtener lista de IDs de desarrolladores activos una sola vez
+    ids_desarrolladores_activos = {dev['id'] for dev in obtener_desarrolladores(incluir_eliminados=False, limite=len(_db_desarrolladores))} # Obtener todos los activos
+
+    for juego in _db_juegos:
+        esta_eliminado_juego = juego.get("esta_eliminado", False)
+        id_desarrollador_juego = juego.get("desarrollador_id")
+
+        # Condición para incluir el juego:
+        # 1. Si se piden incluir eliminados: incluir todos.
+        # 2. Si NO se piden incluir eliminados: incluir solo si el juego NO está eliminado Y su desarrollador está en la lista de activos.
+        if incluir_eliminados:
+            juegos_filtrados.append(juego)
+        elif not esta_eliminado_juego and id_desarrollador_juego in ids_desarrolladores_activos:
+            juegos_filtrados.append(juego)
+
+    # Aplicar paginación a los resultados filtrados
+    return juegos_filtrados[saltar : saltar + limite]
