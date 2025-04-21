@@ -328,3 +328,19 @@ def actualizar_juego_existente(id_juego: int, datos_juego: JuegoCrear):
     tags=["Juegos"],
     summary="Eliminar (lógicamente) un juego"
     )
+
+def eliminar_juego_existente(id_juego: int):
+    """
+    Marca un juego como eliminado (borrado lógico).
+
+    El registro permanece (`esta_eliminado = True`) para trazabilidad, pero
+    no aparecerá en las búsquedas normales.
+    Devuelve el objeto del juego con el estado actualizado.
+    """
+    juego_eliminado = crud.eliminar_logico_juego(id_juego=id_juego)
+    if juego_eliminado is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"No se encontró el juego con ID {id_juego} o ya estaba eliminado."
+        )
+    return juego_eliminado # Devuelve el objeto con esta_eliminado=True
