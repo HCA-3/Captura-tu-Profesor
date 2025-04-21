@@ -62,3 +62,22 @@ def crear_desarrollador(datos_desarrollador: DesarrolladorCrear) -> Dict[str, An
             status_code=status.HTTP_409_CONFLICT,
             detail=f"Ya existe un desarrollador activo con el nombre '{datos_desarrollador.nombre}'."
         )
+        
+         # Crea el diccionario de datos para el nuevo desarrollador
+    nuevo_desarrollador_dict = Desarrollador(
+        id=nuevo_id,
+        esta_eliminado=False,
+        **datos_desarrollador.dict() # Convierte el modelo Pydantic a dict
+    ).dict() # Asegura que el resultado final sea un dict
+
+    _db_desarrolladores.append(nuevo_desarrollador_dict)
+    guardar_desarrolladores(_db_desarrolladores) # Persistir cambio
+    return nuevo_desarrollador_dict # Retornar el dict creado
+
+def actualizar_desarrollador(id_desarrollador: int, datos_actualizacion: DesarrolladorCrear) -> Optional[Dict[str, Any]]:
+    """Actualiza un desarrollador existente."""
+    indice_desarrollador = -1
+    for i, dev in enumerate(_db_desarrolladores):
+        if dev.get("id") == id_desarrollador:
+            indice_desarrollador = i
+            break
