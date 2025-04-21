@@ -251,3 +251,13 @@ def actualizar_juego(id_juego: int, datos_actualizacion: JuegoCrear) -> Optional
  _db_juegos[indice_juego] = juego_a_actualizar
     guardar_juegos(_db_juegos) # Persistir
     return juego_a_actualizar
+
+def eliminar_logico_juego(id_juego: int) -> Optional[Dict[str, Any]]:
+    """Marca un juego como eliminado (borrado lógico)."""
+    juego = obtener_juego_por_id(id_juego)
+    if juego is None or juego.get("esta_eliminado"):
+        return None # No encontrado o ya eliminado
+
+    juego['esta_eliminado'] = True
+    guardar_juegos(_db_juegos) # Persistir
+    return juego
