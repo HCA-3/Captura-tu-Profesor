@@ -1,1 +1,27 @@
-id,titulo,genero,plataformas,ano_lanzamiento,desarrollador_id,esta_eliminado
+id,titulo,genero,plataformas,ano_lanzamiento,nombre_desarrollador,esta_eliminado
+1745335422425,contra,ARPG,"poly,celular,Xbox",1987,"Konami, Ocean Software, Hamster Corporation, Digital Eclipse, Backbone Entertainment, Paul Owens",False
+1745335422426,contra,ARPG,"poly,celular,Xbox",1987,"Konami, Ocean Software, Hamster Corporation, Digital Eclipse, Backbone Entertainment, Paul Owens",True
+1745335422427,contra,ARPG,"poly,celular,Xbox",1987,"Konami, Ocean Software, Hamster Corporation, Digital Eclipse, Backbone Entertainment, Paul Owens",False
+1745335422428,contra,ARPG,"poly,celular,Xbox",1987,"Konami, Ocean Software, Hamster Corporation, Digital Eclipse, Backbone Entertainment, Paul Owens",True
+1745335422429,contra,ARPG,"poly,celular,Xbox",1987,"Konami, Ocean Software, Hamster Corporation, Digital Eclipse, Backbone Entertainment, Paul Owens",False
+1745335422430,contra,ARPG,"poly,celular,Xbox",1987,"Konami, Ocean Software, Hamster Corporation, Digital Eclipse, Backbone Entertainment, Paul Owens",False
+1745335422431,contra,ARPG,"poly,celular,Xbox",1987,"Konami, Ocean Software, Hamster Corporation, Digital Eclipse, Backbone Entertainment, Paul Owens",False
+1745335422432,contra,ARPG,"poly,celular,Xbox",1987,"Konami, Ocean Software, Hamster Corporation, Digital Eclipse, Backbone Entertainment, Paul Owens",False
+1745335422433,contra,ARPG,"poli,celular,Xbox",1987,"Konami, Ocean Software, Hamster Corporation, Digital Eclipse, Backbone Entertainment, Paul Owens",False
+1745335422434,contra,ARPG,"poli,celular,Xbox",1987,"Konami, Ocean Software, Hamster Corporation, Digital Eclipse, Backbone Entertainment, Paul Owens",False
+1745335422435,contra,ARPG,"poli,celular,Xbox",1987,"Konami, Ocean Software, Hamster Corporation, Digital Eclipse, Backbone Entertainment, Paul Owens",False
+1745335422436,contra,ARPG,"poli,celular,Xbox",1987,"Konami, Ocean Software, Hamster Corporation, Digital Eclipse, Backbone Entertainment, Paul Owens",False
+1745335422437,contra,ARPG,"poli,celular,Xbox",1987,"Konami, Ocean Software, Hamster Corporation, Digital Eclipse, Backbone Entertainment, Paul Owens",False
+1745335422438,contra,ARPG,"poli,celular,Xbox",1987,"Konami, Ocean Software, Hamster Corporation, Digital Eclipse, Backbone Entertainment, Paul Owens",False
+1745335422439,contra,ARPG,"poli,celular,Xbox",1987,"Konami, Ocean Software, Hamster Corporation, Digital Eclipse, Backbone Entertainment, Paul Owens",False
+1745335422440,contra,ARPG,"poli,celular,Xbox",1987,"Konami, Ocean Software, Hamster Corporation, Digital Eclipse, Backbone Entertainment, Paul Owens",False
+1745335422441,contra,ARPG,"poli,celular,Xbox",1987,"Konami, Ocean Software, Hamster Corporation, Digital Eclipse, Backbone Entertainment, Paul Owens",False
+1745335422442,contra,ARPG,"poli,celular,Xbox",1987,"Konami, Ocean Software, Hamster Corporation, Digital Eclipse, Backbone Entertainment, Paul Owens",False
+1745335422443,contra,ARPG,"poli,celular,Xbox",1987,"Konami, Ocean Software, Hamster Corporation, Digital Eclipse, Backbone Entertainment, Paul Owens",False
+1745335422444,contra,ARPG,"poli,celular,Xbox",1987,"Konami, Ocean Software, Hamster Corporation, Digital Eclipse, Backbone Entertainment, Paul Owens",False
+1745335818818,Minecraft,"Sandbox, Supervivencia","PC,Mac,Linux,Xbox 360,Xbox One,Xbox Series X/S,PlayStation 3,PlayStation 4,PlayStation 5,Nintendo Switch,Android,iOS,Windows Phone,PS Vita,Wii U,Raspberry Pi",2011,Mojang Studios,False
+1745335818819,Minecraft,"Sandbox, Supervivencia","PC,Mac,Linux,Xbox 360,Xbox One,Xbox Series X/S,PlayStation 3,PlayStation 4,PlayStation 5,Nintendo Switch,Android,iOS,Windows Phone,PS Vita,Wii U,Raspberry Pi",2011,Mojang Studios,False
+1745335818820,Minecraft,"Sandbox, Supervivencia","PC,Mac,Linux,Xbox 360,Xbox One,Xbox Series X/S,PlayStation 3,PlayStation 4,PlayStation 5,Nintendo Switch,Android,iOS,Windows Phone,PS Vita,Wii U,Raspberry Pi",2011,Mojang Studios,False
+1745335818821,Super Mario Bros.,"Plataformas, aventura","NES,Famicom,Game Boy Advance,Wii,Wii U,Nintendo 3DS,Nintendo Switch",1985,Nintendo,False
+1745338620979,Elden Ring,ARPG,"PC,PS5,Xbox Series X",2022,FromSoftware,True
+1745338620980,tutoría con el profe santos este es el eliminadao,ingeniero,U CATOLICA,2025,PROFESOR DE INGENIERIA,True
