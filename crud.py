@@ -1,249 +1,176 @@
 from typing import List, Optional, Dict, Any
 from fastapi import HTTPException, status
-
 import modelos
-from modelos import Juego, JuegoCrear, Desarrollador, DesarrolladorCrear
-from persistencia import (
+from modelos import Juego, JuegoCrear, JuegoBase, Consola, ConsolaCrear, ConsolaBase 
+from persistencia import ( 
     cargar_juegos, guardar_juegos,
-    cargar_desarrolladores, guardar_desarrolladores
+    cargar_consolas, guardar_consolas
 )
 from utilidades import obtener_siguiente_id
 
 try:
     _db_juegos: List[Dict[str, Any]] = cargar_juegos()
-    _db_desarrolladores: List[Dict[str, Any]] = cargar_desarrolladores()
 except HTTPException as e:
-    print(f"Error crítico al cargar datos iniciales: {e.detail}. Iniciando con datos vacíos.")
+    print(f"Error crítico al cargar datos iniciales de juegos: {e.detail}. Iniciando con datos vacíos.")
     _db_juegos = []
-    _db_desarrolladores = []
 
-def obtener_desarrollador_por_id(id_desarrollador: int) -> Optional[Dict[str, Any]]:
-    """Busca un desarrollador por ID (incluyendo borrados lógicamente)."""
-    for dev in _db_desarrolladores:
-        # Usamos .get() para evitar KeyError si el campo falta por alguna razón
-        if dev.get("id") == id_desarrollador:
-            return dev
-    return None
-
-def obtener_desarrollador_activo_por_id(id_desarrollador: int) -> Optional[Dict[str, Any]]:
-    """Busca un desarrollador activo (no eliminado) por ID."""
-    dev = obtener_desarrollador_por_id(id_desarrollador)
-    # Comprueba que exista y que 'esta_eliminado' sea False o None (consideramos None como no eliminado)
-    if dev and not dev.get("esta_eliminado", False):
-        return dev
-    return None
-
-def obtener_desarrolladores(saltar: int = 0, limite: int = 100, incluir_eliminados: bool = False) -> List[Dict[str, Any]]:
-    """Obtiene una lista de desarrolladores (opcionalmente incluye borrados)."""
-    if incluir_eliminados:
-        resultados = _db_desarrolladores
-    else:
-        # Filtra para obtener solo los activos
-        resultados = [dev for dev in _db_desarrolladores if not dev.get("esta_eliminado", False)]
-    # Aplica paginación
-    return resultados[saltar : saltar + limite]
-
-def crear_desarrollador(datos_desarrollador: DesarrolladorCrear) -> Dict[str, Any]:
-    """Crea un nuevo desarrollador."""
-    nuevo_id = obtener_siguiente_id()
-
-    # Verificar si ya existe un desarrollador activo con el mismo nombre (insensible a mayúsculas)
-    nombre_nuevo = datos_desarrollador.nombre.strip().lower()
-    existente = next((d for d in _db_desarrolladores if d.get("nombre", "").strip().lower() == nombre_nuevo and not d.get("esta_eliminado")), None)
-    if existente:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=f"Ya existe un desarrollador activo con el nombre '{datos_desarrollador.nombre}'."
-        )
-
-    # Crea el diccionario de datos para el nuevo desarrollador
-    nuevo_desarrollador_dict = Desarrollador(
-        id=nuevo_id,
-        esta_eliminado=False,
-        **datos_desarrollador.dict() 
-    ).dict() 
-
-    _db_desarrolladores.append(nuevo_desarrollador_dict)
-    guardar_desarrolladores(_db_desarrolladores) # Persistir cambio
-    return nuevo_desarrollador_dict # Retornar el dict creado
-
-def actualizar_desarrollador(id_desarrollador: int, datos_actualizacion: DesarrolladorCrear) -> Optional[Dict[str, Any]]:
-    """Actualiza un desarrollador existente."""
-    indice_desarrollador = -1
-    for i, dev in enumerate(_db_desarrolladores):
-        if dev.get("id") == id_desarrollador:
-            indice_desarrollador = i
-            break
-
-    if indice_desarrollador == -1:
-        return None 
-
-    desarrollador_a_actualizar = _db_desarrolladores[indice_desarrollador]
-
-    datos_nuevos = datos_actualizacion.dict(exclude_unset=True)
-
-    if "nombre" in datos_nuevos:
-        nombre_nuevo = datos_nuevos["nombre"].strip().lower()
-        nombre_actual = desarrollador_a_actualizar.get("nombre", "").strip().lower()
-        if nombre_nuevo != nombre_actual: 
-             existente = next((d for i, d in enumerate(_db_desarrolladores) if i != indice_desarrollador and d.get("nombre", "").strip().lower() == nombre_nuevo and not d.get("esta_eliminado")), None)
-             if existente:
-                raise HTTPException(
-                    status_code=status.HTTP_409_CONFLICT,
-                    detail=f"Ya existe otro desarrollador activo con el nombre '{datos_nuevos['nombre']}'."
-                )
-
-    for clave, valor in datos_nuevos.items():
-        if clave in DesarrolladorBase.__fields__:
-             desarrollador_a_actualizar[clave] = valor
-
-    _db_desarrolladores[indice_desarrollador] = desarrollador_a_actualizar
-    guardar_desarrolladores(_db_desarrolladores) 
-    return desarrollador_a_actualizar
-
-def eliminar_logico_desarrollador(id_desarrollador: int) -> Optional[Dict[str, Any]]:
-    """Marca un desarrollador como eliminado (borrado lógico)."""
-    desarrollador = obtener_desarrollador_por_id(id_desarrollador)
-
-    # Si no existe o ya está borrado, no hacer nada (o devolver error si se prefiere)
-    if desarrollador is None or desarrollador.get("esta_eliminado"):
-        return None 
-
-
-    desarrollador['esta_eliminado'] = True
-
-    guardar_desarrolladores(_db_desarrolladores) 
-    return desarrollador
-
-def buscar_desarrolladores_por_nombre(consulta_nombre: str) -> List[Dict[str, Any]]:
-    """Busca desarrolladores activos por nombre (búsqueda parcial, insensible a mayúsculas)."""
-    consulta = consulta_nombre.strip().lower()
-    if not consulta: # Evitar búsqueda vacía
-        return []
-    resultados = [
-        dev for dev in _db_desarrolladores
-        if not dev.get("esta_eliminado", False) and consulta in dev.get("nombre", "").lower()
-    ]
-    return resultados
-
-# --- Operaciones CRUD para Juegos ---
+try: 
+    _db_consolas: List[Dict[str, Any]] = cargar_consolas()
+except HTTPException as e:
+    print(f"Error crítico al cargar datos iniciales de consolas: {e.detail}. Iniciando con datos vacíos.")
+    _db_consolas = []
 
 def obtener_juego_por_id(id_juego: int) -> Optional[Dict[str, Any]]:
-    """Busca un juego por ID (incluyendo borrados lógicamente)."""
     for juego in _db_juegos:
-        if juego.get("id") == id_juego:
-            return juego
+        if juego.get("id") == id_juego: return juego
     return None
 
 def obtener_juego_activo_por_id(id_juego: int) -> Optional[Dict[str, Any]]:
-    """Busca un juego activo por ID, asegurando que su desarrollador también esté activo."""
     juego = obtener_juego_por_id(id_juego)
-    if juego and not juego.get("esta_eliminado"):
-        desarrollador = obtener_desarrollador_activo_por_id(juego.get("desarrollador_id"))
-        if desarrollador:
-            return juego
-        else:
-             return None
+    if juego and not juego.get("esta_eliminado", False): return juego
     return None
 
 def obtener_juegos(saltar: int = 0, limite: int = 100, incluir_eliminados: bool = False) -> List[Dict[str, Any]]:
-    """Obtiene una lista de juegos. Por defecto, solo activos con desarrollador activo."""
-
-    juegos_filtrados = []
-    # Optimización: obtener lista de IDs de desarrolladores activos una sola vez
-    ids_desarrolladores_activos = {dev['id'] for dev in obtener_desarrolladores(incluir_eliminados=False, limite=len(_db_desarrolladores))} # Obtener todos los activos
-
-    for juego in _db_juegos:
-        esta_eliminado_juego = juego.get("esta_eliminado", False)
-        id_desarrollador_juego = juego.get("desarrollador_id")
-
-        # Condición para incluir el juego:
-        # 1. Si se piden incluir eliminados: incluir todos.
-        # 2. Si NO se piden incluir eliminados: incluir solo si el juego NO está eliminado Y su desarrollador está en la lista de activos.
-        if incluir_eliminados:
-            juegos_filtrados.append(juego)
-        elif not esta_eliminado_juego and id_desarrollador_juego in ids_desarrolladores_activos:
-            juegos_filtrados.append(juego)
-
-    # Aplicar paginación a los resultados filtrados
-    return juegos_filtrados[saltar : saltar + limite]
-
+    resultados = [j for j in _db_juegos if incluir_eliminados or not j.get("esta_eliminado", False)]
+    return resultados[saltar : saltar + limite]
 
 def crear_juego(datos_juego: JuegoCrear) -> Dict[str, Any]:
-    """Crea un nuevo juego."""
-    # Verificar que el desarrollador exista y esté activo
-    desarrollador = obtener_desarrollador_activo_por_id(datos_juego.desarrollador_id)
-    if not desarrollador:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, # 400 podría ser más apropiado que 404 si el ID existe pero no está activo
-            detail=f"El desarrollador con ID {datos_juego.desarrollador_id} no existe o no está activo."
-        )
-
     nuevo_id = obtener_siguiente_id()
-    nuevo_juego_dict = Juego(
-        id=nuevo_id,
-        esta_eliminado=False,
-        **datos_juego.dict()
-    ).dict()
-
+    nuevo_juego_dict = Juego(id=nuevo_id, esta_eliminado=False, **datos_juego.dict()).dict()
     _db_juegos.append(nuevo_juego_dict)
-    guardar_juegos(_db_juegos) # Persistir
+    guardar_juegos(_db_juegos)
     return nuevo_juego_dict
 
 def actualizar_juego(id_juego: int, datos_actualizacion: JuegoCrear) -> Optional[Dict[str, Any]]:
-    """Actualiza un juego existente."""
     indice_juego = -1
     for i, juego in enumerate(_db_juegos):
-        if juego.get("id") == id_juego:
-            indice_juego = i
-            break
-
-    if indice_juego == -1:
-        return None 
-
+        if juego.get("id") == id_juego: indice_juego = i; break
+    if indice_juego == -1: return None
     juego_a_actualizar = _db_juegos[indice_juego]
-
-    nuevo_id_desarrollador = datos_actualizacion.desarrollador_id
-    if nuevo_id_desarrollador != juego_a_actualizar.get("desarrollador_id"):
-        nuevo_desarrollador = obtener_desarrollador_activo_por_id(nuevo_id_desarrollador)
-        if not nuevo_desarrollador:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"El nuevo desarrollador con ID {nuevo_id_desarrollador} no existe o no está activo."
-            )
-
     datos_nuevos = datos_actualizacion.dict(exclude_unset=True)
     for clave, valor in datos_nuevos.items():
-         if clave in JuegoBase.__fields__: 
-              juego_a_actualizar[clave] = valor
-
+         if clave in JuegoBase.__fields__: juego_a_actualizar[clave] = valor
     _db_juegos[indice_juego] = juego_a_actualizar
     guardar_juegos(_db_juegos)
     return juego_a_actualizar
 
 def eliminar_logico_juego(id_juego: int) -> Optional[Dict[str, Any]]:
-    """Marca un juego como eliminado (borrado lógico)."""
     juego = obtener_juego_por_id(id_juego)
-    if juego is None or juego.get("esta_eliminado"):
-        return None 
-
+    if juego is None or juego.get("esta_eliminado"): return None
     juego['esta_eliminado'] = True
     guardar_juegos(_db_juegos)
     return juego
 
 def filtrar_juegos_por_genero(genero: str) -> List[Dict[str, Any]]:
-    """Filtra juegos activos por género (insensible a mayúsculas, búsqueda parcial)."""
     consulta_genero = genero.strip().lower()
-    if not consulta_genero:
-        return []
-
-    # Usamos obtener_juegos() para asegurarnos de que solo trabajamos con juegos activos
-    # cuyo desarrollador también esté activo. Es menos eficiente si hay muchos juegos.
-    # Alternativa: filtrar _db_juegos directamente y luego verificar desarrollador activo.
+    if not consulta_genero: return []
     juegos_activos = obtener_juegos(limite=len(_db_juegos), incluir_eliminados=False)
+    return [j for j in juegos_activos if consulta_genero in j.get("genero", "").lower()]
 
+def buscar_juegos_por_desarrollador(nombre_dev: str) -> List[Dict[str, Any]]:
+    consulta_dev = nombre_dev.strip().lower()
+    if not consulta_dev: return []
+    juegos_activos = obtener_juegos(limite=len(_db_juegos), incluir_eliminados=False)
+    return [j for j in juegos_activos if consulta_dev in j.get("nombre_desarrollador", "").lower()]
+
+
+# --- Operaciones CRUD para Consolas (Nuevo) ---
+
+def obtener_consola_por_id(id_consola: int) -> Optional[Dict[str, Any]]:
+    """Busca una consola por ID (incluyendo borradas lógicamente)."""
+    for consola in _db_consolas:
+        if consola.get("id") == id_consola:
+            return consola
+    return None
+
+def obtener_consola_activa_por_id(id_consola: int) -> Optional[Dict[str, Any]]:
+    """Busca una consola activa por ID."""
+    consola = obtener_consola_por_id(id_consola)
+    if consola and not consola.get("esta_eliminado", False):
+        return consola
+    return None
+
+def obtener_consolas(saltar: int = 0, limite: int = 100, incluir_eliminados: bool = False) -> List[Dict[str, Any]]:
+    """Obtiene una lista de consolas."""
+    if incluir_eliminados:
+        resultados = _db_consolas
+    else:
+        resultados = [c for c in _db_consolas if not c.get("esta_eliminado", False)]
+    return resultados[saltar : saltar + limite]
+
+def crear_consola(datos_consola: ConsolaCrear) -> Dict[str, Any]:
+    """Crea una nueva consola."""
+    nuevo_id = obtener_siguiente_id()
+    # Validación opcional: Evitar nombres duplicados activos
+    nombre_nuevo = datos_consola.nombre.strip().lower()
+    existente = next((c for c in _db_consolas if c.get("nombre", "").strip().lower() == nombre_nuevo and not c.get("esta_eliminado")), None)
+    if existente:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Ya existe una consola activa con el nombre '{datos_consola.nombre}'."
+        )
+
+    nueva_consola_dict = Consola(
+        id=nuevo_id,
+        esta_eliminado=False,
+        **datos_consola.dict()
+    ).dict()
+
+    _db_consolas.append(nueva_consola_dict)
+    guardar_consolas(_db_consolas) # Guardar en consolas.csv
+    return nueva_consola_dict
+
+def actualizar_consola(id_consola: int, datos_actualizacion: ConsolaCrear) -> Optional[Dict[str, Any]]:
+    """Actualiza una consola existente."""
+    indice_consola = -1
+    for i, consola in enumerate(_db_consolas):
+        if consola.get("id") == id_consola:
+            indice_consola = i
+            break
+
+    if indice_consola == -1:
+        return None
+
+    consola_a_actualizar = _db_consolas[indice_consola]
+    datos_nuevos = datos_actualizacion.dict(exclude_unset=True)
+
+    if "nombre" in datos_nuevos:
+        nombre_nuevo = datos_nuevos["nombre"].strip().lower()
+        nombre_actual = consola_a_actualizar.get("nombre", "").strip().lower()
+        if nombre_nuevo != nombre_actual:
+             existente = next((c for i, c in enumerate(_db_consolas) if i != indice_consola and c.get("nombre", "").strip().lower() == nombre_nuevo and not c.get("esta_eliminado")), None)
+             if existente:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail=f"Ya existe otra consola activa con el nombre '{datos_nuevos['nombre']}'."
+                )
+
+    for clave, valor in datos_nuevos.items():
+         if clave in ConsolaBase.__fields__: 
+              consola_a_actualizar[clave] = valor
+
+    _db_consolas[indice_consola] = consola_a_actualizar
+    guardar_consolas(_db_consolas)
+    return consola_a_actualizar
+
+def eliminar_logico_consola(id_consola: int) -> Optional[Dict[str, Any]]:
+    """Marca una consola como eliminada (borrado lógico)."""
+    consola = obtener_consola_por_id(id_consola)
+    if consola is None or consola.get("esta_eliminado"):
+        return None
+
+    consola['esta_eliminado'] = True
+    guardar_consolas(_db_consolas)
+    return consola
+
+def buscar_consolas_por_fabricante(fabricante: str) -> List[Dict[str, Any]]:
+    """Busca consolas activas por fabricante (búsqueda parcial, insensible a mayúsculas)."""
+    consulta = fabricante.strip().lower()
+    if not consulta:
+        return []
+    consolas_activas = obtener_consolas(limite=len(_db_consolas), incluir_eliminados=False)
     resultados = [
-        juego for juego in juegos_activos
-        if consulta_genero in juego.get("genero", "").lower()
+        c for c in consolas_activas
+        if consulta in c.get("fabricante", "").lower()
     ]
     return resultados
