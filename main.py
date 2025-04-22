@@ -1,23 +1,177 @@
 from fastapi import FastAPI, HTTPException, Depends, status, Query
 from typing import List, Optional
 import crud
-import modelos
-from modelos import Juego, JuegoCrear 
+import modelos 
+from modelos import Juego, JuegoCrear, Desarrollador, DesarrolladorCrear
 
 app = FastAPI(
-    title="API de Videojuegos (Simplificada)",
-    description="Una API para gestionar información de videojuegos.",
+    title="API CapturaTuProfesor - Videojuegos",
+    description="Una API para gestionar información de videojuegos y desarrolladores.",
     version="1.0.0"
 )
 
+
 @app.exception_handler(Exception)
 async def manejador_excepciones_generico(request, exc: Exception):
-    print(f"Error no manejado detectado: {exc}")
+
+    print(f"Error no manejado detectado: {exc}") 
+
     from fastapi.responses import JSONResponse
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         content={"detail": "Ocurrió un error interno inesperado en el servidor."},
     )
+
+@app.post(
+    "/desarrolladores/",
+    response_model=Desarrollador, 
+    status_code=status.HTTP_201_CREATED,
+    tags=["Desarrolladores"],
+    summary="Crear un nuevo desarrollador" 
+    )
+def crear_nuevo_desarrollador(datos_desarrollador: DesarrolladorCrear): 
+    """
+    Crea un nuevo desarrollador en la base de datos (archivo CSV).
+
+    - **datos_desarrollador**: JSON con los datos del desarrollador.
+        - `nombre` (str): Requerido.
+        - `pais` (str, opcional): País de origen.
+        - `ano_fundacion` (int, opcional): Año de fundación.
+    \f
+    :param datos_desarrollador: Datos Pydantic validados.
+    :return: El objeto Desarrollador creado.
+    :raises HTTPException 409: Si ya existe un desarrollador activo con ese nombre.
+    :raises HTTPException 500: Si ocurre un error interno al guardar.
+    """
+    try:
+        nuevo_dev = crud.crear_desarrollador(datos_desarrollador=datos_desarrollador)
+        return nuevo_dev
+    except HTTPException as http_exc:
+        raise http_exc
+    except Exception as e:
+        print(f"Error inesperado al crear desarrollador: {e}") 
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error interno al intentar crear el desarrollador.")
+
+
+@app.get(
+    "/desarrolladores/",
+    response_model=List[Desarrollador],
+    tags=["Desarrolladores"],
+    summary="Listar desarrolladores"
+    )
+def leer_desarrolladores(
+    saltar: int = 0,
+    limite: int = 10,
+    incluir_eliminados: bool = Query(False, description="Incluir desarrolladores marcados como eliminados en la lista")
+    ):
+    """
+    Obtiene una lista paginada de desarrolladores.
+
+    Permite incluir opcionalmente los desarrolladores marcados como eliminados
+    para propósitos de trazabilidad o administración.
+    """
+    try:
+        desarrolladores = crud.obtener_desarrolladores(saltar=saltar, limite=limite, incluir_eliminados=incluir_eliminados)
+        return desarrolladores
+    except Exception as e:
+        print(f"Error inesperado al obtener desarrolladores: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error interno al obtener la lista de desarrolladores.")
+
+
+@app.get(
+    "/desarrolladores/{id_desarrollador}",
+    response_model=Desarrollador,
+    tags=["Desarrolladores"],
+    summary="Obtener un desarrollador por ID"
+    )
+def leer_desarrollador_por_id(id_desarrollador: int):
+    """
+    Obtiene los detalles de un desarrollador específico usando su ID.
+
+    Solo devuelve desarrolladores que **no** estén marcados como eliminados.
+    """
+    db_desarrollador = crud.obtener_desarrollador_activo_por_id(id_desarrollador=id_desarrollador)
+    if db_desarrollador is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"El desarrollador con ID {id_desarrollador} no fue encontrado o está inactivo."
+        )
+    return db_desarrollador
+
+@app.put(
+    "/desarrolladores/{id_desarrollador}",
+    response_model=Desarrollador,
+    tags=["Desarrolladores"],
+    summary="Actualizar un desarrollador"
+    )
+def actualizar_desarrollador_existente(id_desarrollador: int, datos_desarrollador: DesarrolladorCrear):
+    """
+    Actualiza la información de un desarrollador existente.
+
+    Permite modificar nombre, país y año de fundación.
+    Verifica conflictos si se cambia el nombre.
+    """
+    try:
+        desarrollador_actualizado = crud.actualizar_desarrollador(
+            id_desarrollador=id_desarrollador,
+            datos_actualizacion=datos_desarrollador
+        )
+        if desarrollador_actualizado is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"No se encontró el desarrollador con ID {id_desarrollador} para actualizar."
+            )
+        return desarrollador_actualizado
+    except HTTPException as http_exc:
+        raise http_exc 
+    except Exception as e:
+        print(f"Error inesperado al actualizar desarrollador {id_desarrollador}: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error interno al intentar actualizar el desarrollador.")
+
+
+@app.delete(
+    "/desarrolladores/{id_desarrollador}",
+    response_model=Desarrollador, 
+    tags=["Desarrolladores"],
+    summary="Eliminar (lógicamente) un desarrollador"
+    )
+def eliminar_desarrollador_existente(id_desarrollador: int):
+    """
+    Marca un desarrollador como eliminado (borrado lógico).
+
+    El registro permanece en el sistema (`esta_eliminado = True`) para mantener
+    la trazabilidad, pero no aparecerá en las búsquedas normales.
+    Devuelve el objeto del desarrollador con el estado actualizado.
+    """
+    desarrollador_eliminado = crud.eliminar_logico_desarrollador(id_desarrollador=id_desarrollador)
+    if desarrollador_eliminado is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"No se encontró el desarrollador con ID {id_desarrollador} o ya estaba eliminado."
+        )
+    return desarrollador_eliminado
+
+
+@app.get(
+    "/desarrolladores/buscar/por_nombre/",
+    response_model=List[Desarrollador],
+    tags=["Desarrolladores"],
+    summary="Buscar desarrolladores por nombre"
+    )
+def buscar_desarrolladores(
+    consulta_nombre: str = Query(..., min_length=1, description="Texto a buscar en el nombre del desarrollador (búsqueda parcial, insensible a mayúsculas)")
+    ):
+    """
+    Busca desarrolladores activos cuyo nombre contenga el texto proporcionado.
+
+    Endpoint de ejemplo para búsqueda por un atributo diferente al ID.
+    """
+    try:
+        desarrolladores = crud.buscar_desarrolladores_por_nombre(consulta_nombre=consulta_nombre)
+        return desarrolladores
+    except Exception as e:
+        print(f"Error inesperado buscando desarrolladores por nombre: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error interno durante la búsqueda de desarrolladores.")
 
 @app.post(
     "/juegos/",
@@ -28,27 +182,29 @@ async def manejador_excepciones_generico(request, exc: Exception):
     )
 def crear_nuevo_juego(datos_juego: JuegoCrear):
     """
-    Crea un nuevo juego en la base de datos (archivo CSV).
+    Crea un nuevo juego asociado a un desarrollador existente y activo.
 
     - **datos_juego**: JSON con los datos del juego.
         - `titulo` (str): Requerido.
         - `genero` (str): Requerido.
         - `plataformas` (List[str]): Lista de plataformas.
         - `ano_lanzamiento` (int, opcional): Año de lanzamiento.
-        - `nombre_desarrollador` (str, opcional): Nombre del desarrollador.
+        - `desarrollador_id` (int): Requerido, ID de un desarrollador activo.
     \f
     :param datos_juego: Datos Pydantic validados.
     :return: El objeto Juego creado.
+    :raises HTTPException 400: Si el `desarrollador_id` no corresponde a un desarrollador activo.
     :raises HTTPException 500: Si ocurre un error interno al guardar.
     """
     try:
         nuevo_juego = crud.crear_juego(datos_juego=datos_juego)
         return nuevo_juego
     except HTTPException as http_exc:
-        raise http_exc
+        raise http_exc 
     except Exception as e:
         print(f"Error inesperado al crear juego: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error interno al intentar crear el juego.")
+
 
 @app.get(
     "/juegos/",
@@ -59,12 +215,13 @@ def crear_nuevo_juego(datos_juego: JuegoCrear):
 def leer_juegos(
     saltar: int = 0,
     limite: int = 10,
-    incluir_eliminados: bool = Query(False, description="Incluir juegos marcados como eliminados")
+    incluir_eliminados: bool = Query(False, description="Incluir juegos marcados como eliminados o cuyo desarrollador esté eliminado")
     ):
     """
     Obtiene una lista paginada de juegos.
 
-    Permite incluir opcionalmente los juegos marcados como eliminados.
+    Por defecto, solo muestra juegos activos cuyo desarrollador asociado también esté activo.
+    La opción `incluir_eliminados` permite ver todos los juegos registrados.
     """
     try:
         juegos = crud.obtener_juegos(saltar=saltar, limite=limite, incluir_eliminados=incluir_eliminados)
@@ -72,6 +229,7 @@ def leer_juegos(
     except Exception as e:
         print(f"Error inesperado al obtener juegos: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error interno al obtener la lista de juegos.")
+
 
 @app.get(
     "/juegos/{id_juego}",
@@ -83,13 +241,14 @@ def leer_juego_por_id(id_juego: int):
     """
     Obtiene los detalles de un juego específico usando su ID.
 
-    Solo devuelve juegos que **no** estén marcados como eliminados.
+    Solo devuelve juegos que **no** estén marcados como eliminados y cuyo
+    desarrollador asociado también esté activo.
     """
     db_juego = crud.obtener_juego_activo_por_id(id_juego=id_juego)
     if db_juego is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Juego con ID {id_juego} no encontrado o está inactivo."
+            detail=f"Juego con ID {id_juego} no encontrado, inactivo o su desarrollador está inactivo."
         )
     return db_juego
 
@@ -102,7 +261,9 @@ def leer_juego_por_id(id_juego: int):
 def actualizar_juego_existente(id_juego: int, datos_juego: JuegoCrear):
     """
     Actualiza la información de un juego existente.
-    Permite modificar todos los campos base, incluyendo 'nombre_desarrollador'.
+
+    Permite modificar todos los campos base. Si se cambia el `desarrollador_id`,
+    se valida que el nuevo ID corresponda a un desarrollador activo.
     """
     try:
         juego_actualizado = crud.actualizar_juego(
@@ -116,20 +277,25 @@ def actualizar_juego_existente(id_juego: int, datos_juego: JuegoCrear):
             )
         return juego_actualizado
     except HTTPException as http_exc:
-        raise http_exc
+        raise http_exc 
     except Exception as e:
         print(f"Error inesperado al actualizar juego {id_juego}: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error interno al intentar actualizar el juego.")
 
+
 @app.delete(
     "/juegos/{id_juego}",
-    response_model=Juego,
+    response_model=Juego, 
     tags=["Juegos"],
     summary="Eliminar (lógicamente) un juego"
     )
 def eliminar_juego_existente(id_juego: int):
     """
-    Marca un juego como eliminado (borrado lógico). (Sin cambios)
+    Marca un juego como eliminado (borrado lógico).
+
+    El registro permanece (`esta_eliminado = True`) para trazabilidad, pero
+    no aparecerá en las búsquedas normales.
+    Devuelve el objeto del juego con el estado actualizado.
     """
     juego_eliminado = crud.eliminar_logico_juego(id_juego=id_juego)
     if juego_eliminado is None:
@@ -137,7 +303,7 @@ def eliminar_juego_existente(id_juego: int):
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"No se encontró el juego con ID {id_juego} o ya estaba eliminado."
         )
-    return juego_eliminado
+    return juego_eliminado 
 
 @app.get(
     "/juegos/filtrar/por_genero/",
@@ -145,11 +311,13 @@ def eliminar_juego_existente(id_juego: int):
     tags=["Juegos"],
     summary="Filtrar juegos por género"
     )
-def filtrar_juegos_por_genero_endpoint( # Renombrado para evitar conflicto con la función crud
+def filtrar_juegos(
     genero: str = Query(..., min_length=1, description="Género por el cual filtrar (búsqueda parcial, insensible a mayúsculas)")
     ):
     """
     Filtra la lista de juegos activos cuyo género contenga el texto proporcionado.
+
+    Endpoint de ejemplo para filtrado basado en un atributo.
     """
     try:
         juegos = crud.filtrar_juegos_por_genero(genero=genero)
@@ -158,49 +326,58 @@ def filtrar_juegos_por_genero_endpoint( # Renombrado para evitar conflicto con l
         print(f"Error inesperado filtrando juegos por género: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error interno durante el filtrado de juegos.")
 
-@app.get(
-    "/juegos/buscar/por_desarrollador/",
-    response_model=List[Juego],
-    tags=["Juegos"],
-    summary="Buscar juegos por nombre de desarrollador"
-    )
-def buscar_juegos_por_desarrollador_endpoint(
-    nombre_dev: str = Query(..., min_length=1, description="Nombre del desarrollador a buscar (búsqueda parcial, insensible a mayúsculas)")
-    ):
-    """
-    Busca juegos activos cuyo campo 'nombre_desarrollador' contenga el texto proporcionado.
-    """
-    try:
-        juegos = crud.buscar_juegos_por_desarrollador(nombre_dev=nombre_dev)
-        return juegos
-    except Exception as e:
-        print(f"Error inesperado buscando juegos por desarrollador: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error interno durante la búsqueda de juegos por desarrollador.")
-
 DESCRIPCION_MAPA_ENDPOINTS = """
-## Mapa de Endpoints de la API de Videojuegos (Simplificada)
+## Mapa de Endpoints de la API de Videojuegos
 
 A continuación se describen los endpoints disponibles:
+
+**Desarrolladores:**
+
+* **`POST /desarrolladores/`**: Crea un nuevo desarrollador.
+    * *Body (JSON)*: `nombre` (str, req.), `pais` (str, opc.), `ano_fundacion` (int, opc.).
+    * *Respuesta*: JSON del desarrollador creado (incluye `id`, `esta_eliminado=False`). Status 201.
+    * *Errores*: 409 (Conflicto si nombre ya existe), 422 (Validación), 500 (Interno).
+* **`GET /desarrolladores/`**: Lista desarrolladores (paginado).
+    * *Query Params*: `saltar` (int, def 0), `limite` (int, def 10), `incluir_eliminados` (bool, def False).
+    * *Respuesta*: Lista [JSON] de desarrolladores. Status 200.
+    * *Errores*: 500 (Interno).
+* **`GET /desarrolladores/{id_desarrollador}`**: Obtiene un desarrollador activo por ID.
+    * *Path Param*: `id_desarrollador` (int).
+    * *Respuesta*: JSON del desarrollador. Status 200.
+    * *Errores*: 404 (No encontrado o inactivo), 422 (ID inválido).
+* **`PUT /desarrolladores/{id_desarrollador}`**: Actualiza un desarrollador por ID.
+    * *Path Param*: `id_desarrollador` (int).
+    * *Body (JSON)*: Campos a actualizar (`nombre`, `pais`, `ano_fundacion`).
+    * *Respuesta*: JSON del desarrollador actualizado. Status 200.
+    * *Errores*: 404 (No encontrado), 409 (Conflicto de nombre), 422 (Validación), 500 (Interno).
+* **`DELETE /desarrolladores/{id_desarrollador}`**: Marca un desarrollador como eliminado (borrado lógico).
+    * *Path Param*: `id_desarrollador` (int).
+    * *Respuesta*: JSON del desarrollador con `esta_eliminado=True`. Status 200.
+    * *Errores*: 404 (No encontrado o ya eliminado), 422 (ID inválido).
+* **`GET /desarrolladores/buscar/por_nombre/`**: Busca desarrolladores activos por nombre.
+    * *Query Param*: `consulta_nombre` (str, req.).
+    * *Respuesta*: Lista [JSON] de desarrolladores coincidentes. Status 200.
+    * *Errores*: 422 (Query param faltante/inválido), 500 (Interno).
 
 **Juegos:**
 
 * **`POST /juegos/`**: Crea un nuevo juego.
-    * *Body (JSON)*: `titulo`(str, req.), `genero`(str, req.), `plataformas`(List[str]), `ano_lanzamiento`(int, opc.), `nombre_desarrollador`(str, opc.).
+    * *Body (JSON)*: `titulo`(str, req.), `genero`(str, req.), `plataformas`(List[str]), `ano_lanzamiento`(int, opc.), `desarrollador_id`(int, req., debe ser activo).
     * *Respuesta*: JSON del juego creado (incluye `id`, `esta_eliminado=False`). Status 201.
-    * *Errores*: 422 (Validación), 500 (Interno).
-* **`GET /juegos/`**: Lista juegos (paginado).
+    * *Errores*: 400 (Desarrollador no encontrado/inactivo), 422 (Validación), 500 (Interno).
+* **`GET /juegos/`**: Lista juegos (paginado). Por defecto, solo activos con desarrollador activo.
     * *Query Params*: `saltar` (int, def 0), `limite` (int, def 10), `incluir_eliminados` (bool, def False).
     * *Respuesta*: Lista [JSON] de juegos. Status 200.
     * *Errores*: 500 (Interno).
-* **`GET /juegos/{id_juego}`**: Obtiene un juego activo por ID.
+* **`GET /juegos/{id_juego}`**: Obtiene un juego activo por ID (con desarrollador activo).
     * *Path Param*: `id_juego` (int).
     * *Respuesta*: JSON del juego. Status 200.
-    * *Errores*: 404 (No encontrado o inactivo), 422 (ID inválido).
+    * *Errores*: 404 (No encontrado, inactivo o desarrollador inactivo), 422 (ID inválido).
 * **`PUT /juegos/{id_juego}`**: Actualiza un juego por ID.
     * *Path Param*: `id_juego` (int).
-    * *Body (JSON)*: Campos a actualizar (`titulo`, `genero`, `plataformas`, `ano_lanzamiento`, `nombre_desarrollador`).
+    * *Body (JSON)*: Campos a actualizar. Si cambia `desarrollador_id`, debe ser válido/activo.
     * *Respuesta*: JSON del juego actualizado. Status 200.
-    * *Errores*: 404 (Juego no encontrado), 422 (Validación), 500 (Interno).
+    * *Errores*: 404 (Juego no encontrado), 400 (Nuevo desarrollador inválido/inactivo), 422 (Validación), 500 (Interno).
 * **`DELETE /juegos/{id_juego}`**: Marca un juego como eliminado (borrado lógico).
     * *Path Param*: `id_juego` (int).
     * *Respuesta*: JSON del juego con `esta_eliminado=True`. Status 200.
@@ -209,22 +386,21 @@ A continuación se describen los endpoints disponibles:
     * *Query Param*: `genero` (str, req.).
     * *Respuesta*: Lista [JSON] de juegos activos coincidentes. Status 200.
     * *Errores*: 422 (Query param faltante/inválido), 500 (Interno).
-* **`GET /juegos/buscar/por_desarrollador/`**: Busca juegos activos por nombre de desarrollador.
-    * *Query Param*: `nombre_dev` (str, req.).
-    * *Respuesta*: Lista [JSON] de juegos activos coincidentes. Status 200.
-    * *Errores*: 422 (Query param faltante/inválido), 500 (Interno).
+
 """
 
-@app.get("/", include_in_schema=False)
+@app.get("/", include_in_schema=False) 
 async def raiz():
-    return {"mensaje": "¡Bienvenido/a a la API de Videojuegos (Simplificada)! Consulta /docs para la documentación."}
+
+    return {"mensaje": "¡Bienvenido/a a la API de Videojuegos! Consulta el mapa de endpoints interactivo en /docs"}
 
 if __name__ == "__main__":
     import uvicorn
-    print("\n" + "="*25 + " MAPA DE ENDPOINTS (Simplificado) " + "="*25)
+    print("\n" + "="*30 + " MAPA DE ENDPOINTS " + "="*30)
     print(DESCRIPCION_MAPA_ENDPOINTS)
     print("="*80)
     print("Iniciando servidor Uvicorn en http://127.0.0.1:8000")
     print("Accede a la documentación interactiva (Swagger UI) en http://127.0.0.1:8000/docs")
-    print("="*80)
+    print("Accede a la documentación alternativa (ReDoc) en http://127.0.0.1:8000/redoc")
+    print("="*80)  
     uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)
