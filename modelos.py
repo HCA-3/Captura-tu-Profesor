@@ -1,7 +1,7 @@
-from pydantic import BaseModel, Field, ConfigDict 
+from pydantic import BaseModel, Field, ConfigDict
 from typing import Optional, List
 
-
+# --- Modelos de Juego ---
 class JuegoBase(BaseModel):
     titulo: str = Field(..., example="Elden Ring")
     genero: str = Field(..., example="ARPG")
@@ -17,25 +17,62 @@ class Juego(JuegoBase):
     esta_eliminado: bool = False
 
     model_config = ConfigDict(
-        from_attributes = True, 
-        validate_assignment = True 
-
+        from_attributes = True,
+        validate_assignment = True
     )
 
-
+# --- Modelos de Consola ---
 class ConsolaBase(BaseModel):
     nombre: str = Field(..., example="PlayStation 5")
     fabricante: Optional[str] = Field(None, example="Sony")
     ano_lanzamiento: Optional[int] = Field(None, example=2020)
 
 class ConsolaCrear(ConsolaBase):
-    pass 
+    pass
 
 class Consola(ConsolaBase):
     id: int
-    esta_eliminado: bool = False 
+    esta_eliminado: bool = False
 
     model_config = ConfigDict(
-        from_attributes = True, 
+        from_attributes = True,
         validate_assignment = True
+    )
+
+# --- Modelos de Accesorio ---
+class AccesorioBase(BaseModel):
+    nombre: str = Field(..., example="DualSense Controller")
+    tipo: str = Field(..., example="Control")
+    fabricante: Optional[str] = Field(None, example="Sony")
+    id_consola: int = Field(..., example=1682292671001, description="ID de la consola a la que pertenece este accesorio")
+
+class AccesorioCrear(AccesorioBase):
+    pass
+
+class Accesorio(AccesorioBase):
+    id: int
+    esta_eliminado: bool = False
+
+    model_config = ConfigDict(
+        from_attributes = True,
+        validate_assignment = True
+    )
+
+# --- Modelos para la Relación Juego-Consola-Accesorio (Nuevo) ---
+
+class ConsolaConAccesorios(Consola):
+    """Representa una consola junto con sus accesorios asociados."""
+    accesorios: List[Accesorio] = Field(default_factory=list, description="Lista de accesorios activos para esta consola")
+
+    model_config = ConfigDict(
+        from_attributes = True # Hereda de Consola, pero reafirmamos
+    )
+
+class JuegoCompatibilidad(BaseModel):
+    """Representa la compatibilidad de un juego con consolas y sus accesorios."""
+    juego: Juego = Field(..., description="Detalles del juego consultado")
+    consolas_compatibles: List[ConsolaConAccesorios] = Field(default_factory=list, description="Lista de consolas compatibles con el juego, incluyendo sus accesorios")
+
+    model_config = ConfigDict(
+        from_attributes = True
     )
