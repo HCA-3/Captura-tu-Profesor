@@ -1,192 +1,214 @@
-from fastapi import FastAPI, HTTPException, Depends, status, Query
-from typing import List, Optional
+from fastapi import FastAPI, HTTPException, Depends, status, Query, UploadFile, Form
+from fastapi.staticfiles import StaticFiles
+from typing import List, Optional, Annotated
 import crud
 import modelos
-# Importar todos los modelos necesarios
 from modelos import (
     Juego, JuegoCrear,
     Consola, ConsolaCrear,
     Accesorio, AccesorioCrear,
-    JuegoCompatibilidad # Añadir el nuevo modelo de respuesta
+    JuegoCompatibilidad
 )
+import almacenamiento
 
 app = FastAPI(
     title="API de Videojuegos, Consolas y Accesorios",
-    description="Una API para gestionar información de videojuegos, consolas, sus accesorios y compatibilidad.", # Descripción actualizada
-    version="1.3.0" # Versión incrementada
+    description="Una API para gestionar información de videojuegos, consolas, sus accesorios y compatibilidad, incluyendo imágenes.",
+    version="1.4.0"  # Versión incrementada por la adición de imágenes
 )
 
+# Montar directorio de imágenes como ruta estática
+app.mount("/imagenes", StaticFiles(directory="imagenes"), name="imagenes")
+
 # --- Manejador de Excepciones Genérico ---
-# ... (Permanece igual) ...
 @app.exception_handler(Exception)
 async def manejador_excepciones_generico(request, exc: Exception):
-    # Es buena idea loggear el error completo para debugging
     import traceback
     print(f"Error no manejado detectado: {exc}")
-    traceback.print_exc() # Imprime el stack trace completo en la consola del servidor
+    traceback.print_exc()
     from fastapi.responses import JSONResponse
-    # Devolver un mensaje genérico al cliente por seguridad
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         content={"detail": "Ocurrió un error interno inesperado en el servidor."},
     )
 
 # --- Endpoints de Juegos ---
-# (POST /juegos/, GET /juegos/, GET /juegos/{id_juego}, PUT /juegos/{id_juego}, DELETE /juegos/{id_juego}, GET /juegos/filtrar/por_genero/, GET /juegos/buscar/por_desarrollador/)
-# ... (Estos endpoints permanecen igual) ...
-@app.post("/juegos/", response_model=Juego, status_code=status.HTTP_201_CREATED, tags=["Juegos"], summary="Crear un nuevo juego")
-def crear_nuevo_juego(datos_juego: JuegoCrear):
-    """
-    Crea un nuevo registro de videojuego en la base de datos.
-
-    - **titulo**: Nombre del juego (requerido).
-    - **genero**: Género principal (requerido).
-    - **plataformas**: Lista de nombres de plataformas donde está disponible (e.g., "PC", "PlayStation 5", "Xbox Series X"). **Importante:** Estos nombres deben coincidir (ignorando mayúsculas/minúsculas) con los nombres de las Consolas registradas para que la compatibilidad funcione.
-    - **ano_lanzamiento**: Año de lanzamiento (opcional).
-    - **nombre_desarrollador**: Nombre del estudio desarrollador (opcional).
-
-    *Retorna el objeto del juego creado.*
-    """
+@app.post("/juegos/", response_model=Juego, status_code=status.HTTP_201_CREATED, tags=["Juegos"])
+async def crear_nuevo_juego(
+    titulo: Annotated[str, Form()],
+    genero: Annotated[str, Form()],
+    plataformas: Annotated[List[str], Form()],
+    ano_lanzamiento: Annotated[Optional[int], Form()] = None,
+    nombre_desarrollador: Annotated[Optional[str], Form()] = None,
+    imagen: Optional[UploadFile] = None
+):
+    """Crea un nuevo juego con imagen opcional."""
+    datos_juego = modelos.JuegoCrear(
+        titulo=titulo,
+        genero=genero,
+        plataformas=plataformas,
+        ano_lanzamiento=ano_lanzamiento,
+        nombre_desarrollador=nombre_desarrollador
+    )
+    
     try:
-        return crud.crear_juego(datos_juego=datos_juego)
+        return await crud.crear_juego(datos_juego=datos_juego, imagen=imagen)
     except HTTPException as http_exc:
-        # Re-lanzar excepciones HTTP específicas (como 409 Conflict)
         raise http_exc
     except Exception as e:
-        # Capturar otros errores y devolver 500
-        print(f"Error inesperado al crear juego: {e}") # Loggear el error
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error interno al intentar crear el juego.")
+        print(f"Error inesperado al crear juego: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
+            detail="Error interno al intentar crear el juego."
+        )
 
-@app.get("/juegos/", response_model=List[Juego], tags=["Juegos"], summary="Listar juegos")
+@app.get("/juegos/", response_model=List[Juego], tags=["Juegos"])
 def leer_juegos(
     saltar: int = Query(0, ge=0, description="Número de registros a saltar para paginación"),
-    limite: int = Query(10, ge=1, le=100, description="Número máximo de registros a devolver"), # Límite máximo razonable
+    limite: int = Query(10, ge=1, le=100, description="Número máximo de registros a devolver"),
     incluir_eliminados: bool = Query(False, description="Incluir juegos marcados como eliminados")
 ):
-    """
-    Obtiene una lista paginada de videojuegos.
-    Permite incluir opcionalmente los juegos marcados como eliminados.
-    """
+    """Obtiene una lista paginada de videojuegos."""
     try:
         juegos = crud.obtener_juegos(saltar=saltar, limite=limite, incluir_eliminados=incluir_eliminados)
         return juegos
     except Exception as e:
         print(f"Error inesperado al obtener juegos: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error interno al obtener la lista de juegos.")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error interno al obtener la lista de juegos."
+        )
 
-
-@app.get("/juegos/{id_juego}", response_model=Juego, tags=["Juegos"], summary="Obtener un juego por ID")
+@app.get("/juegos/{id_juego}", response_model=Juego, tags=["Juegos"])
 def leer_juego_por_id(id_juego: int):
     """Obtiene detalles de un videojuego específico por su ID (solo activos)."""
     db_juego = crud.obtener_juego_activo_por_id(id_juego=id_juego)
     if db_juego is None:
-        # Devolver 404 si no se encuentra o está inactivo
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Juego con ID {id_juego} no encontrado o inactivo.")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Juego con ID {id_juego} no encontrado o inactivo."
+        )
     return db_juego
 
-@app.put("/juegos/{id_juego}", response_model=Juego, tags=["Juegos"], summary="Actualizar un juego")
-def actualizar_juego_existente(id_juego: int, datos_juego: JuegoCrear):
-    """
-    Actualiza la información de un videojuego existente por su ID.
-    Solo se pueden actualizar juegos activos.
-    Proporciona los campos a modificar en el cuerpo de la solicitud.
-    **Importante:** Si cambias el campo `plataformas`, asegúrate que los nombres coincidan con las consolas existentes para mantener la relación de compatibilidad.
-    """
+@app.put("/juegos/{id_juego}", response_model=Juego, tags=["Juegos"])
+async def actualizar_juego_existente(
+    id_juego: int,
+    titulo: Annotated[Optional[str], Form()] = None,
+    genero: Annotated[Optional[str], Form()] = None,
+    plataformas: Annotated[Optional[List[str]], Form()] = None,
+    ano_lanzamiento: Annotated[Optional[int], Form()] = None,
+    nombre_desarrollador: Annotated[Optional[str], Form()] = None,
+    imagen: Optional[UploadFile] = None
+):
+    """Actualiza un juego existente con imagen opcional."""
+    datos_actualizacion = modelos.JuegoCrear(
+        titulo=titulo if titulo is not None else "",
+        genero=genero if genero is not None else "",
+        plataformas=plataformas if plataformas is not None else [],
+        ano_lanzamiento=ano_lanzamiento,
+        nombre_desarrollador=nombre_desarrollador
+    )
+    
     try:
-        # La función crud.actualizar_juego ya maneja el 404 si no existe o está eliminado
-        juego_actualizado = crud.actualizar_juego(id_juego=id_juego, datos_actualizacion=datos_juego)
-        # No es necesario verificar 'is None' aquí si crud lanza la excepción
-        return juego_actualizado
+        return await crud.actualizar_juego(
+            id_juego=id_juego,
+            datos_actualizacion=datos_actualizacion,
+            imagen=imagen
+        )
     except HTTPException as http_exc:
         raise http_exc
     except Exception as e:
         print(f"Error inesperado al actualizar juego {id_juego}: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error interno al intentar actualizar el juego.")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error interno al intentar actualizar el juego."
+        )
 
-@app.delete("/juegos/{id_juego}", response_model=Juego, tags=["Juegos"], summary="Eliminar (lógicamente) un juego")
+@app.delete("/juegos/{id_juego}", response_model=Juego, tags=["Juegos"])
 def eliminar_juego_existente(id_juego: int):
-    """
-    Marca un videojuego como eliminado (borrado lógico).
-    El juego no se borra físicamente, pero se marca como inactivo.
-    Retorna el objeto del juego marcado como eliminado.
-    """
+    """Marca un videojuego como eliminado (borrado lógico)."""
     try:
-         # La función crud.eliminar_logico_juego maneja 404 y 409
         juego_eliminado = crud.eliminar_logico_juego(id_juego=id_juego)
         return juego_eliminado
     except HTTPException as http_exc:
-         raise http_exc
+        raise http_exc
     except Exception as e:
-         print(f"Error inesperado al eliminar juego {id_juego}: {e}")
-         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error interno al intentar eliminar el juego.")
+        print(f"Error inesperado al eliminar juego {id_juego}: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error interno al intentar eliminar el juego."
+        )
 
-
-@app.get("/juegos/filtrar/por_genero/", response_model=List[Juego], tags=["Juegos"], summary="Filtrar juegos por género")
-def filtrar_juegos_por_genero_endpoint(genero: str = Query(..., min_length=1, description="Género a buscar (coincidencia parcial, insensible a mayúsculas)")):
+@app.get("/juegos/filtrar/por_genero/", response_model=List[Juego], tags=["Juegos"])
+def filtrar_juegos_por_genero_endpoint(
+    genero: str = Query(..., min_length=1, description="Género a buscar (coincidencia parcial)")
+):
     """Busca juegos activos cuyo género contenga el texto proporcionado."""
     try:
         return crud.filtrar_juegos_por_genero(genero=genero)
     except Exception as e:
         print(f"Error inesperado al filtrar juegos por género: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error interno al filtrar juegos por género.")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error interno al filtrar juegos por género."
+        )
 
-@app.get("/juegos/buscar/por_desarrollador/", response_model=List[Juego], tags=["Juegos"], summary="Buscar juegos por nombre de desarrollador")
-def buscar_juegos_por_desarrollador_endpoint(nombre_dev: str = Query(..., min_length=1, description="Nombre del desarrollador a buscar (coincidencia parcial, insensible a mayúsculas)")):
+@app.get("/juegos/buscar/por_desarrollador/", response_model=List[Juego], tags=["Juegos"])
+def buscar_juegos_por_desarrollador_endpoint(
+    nombre_dev: str = Query(..., min_length=1, description="Nombre del desarrollador a buscar")
+):
     """Busca juegos activos cuyo nombre de desarrollador contenga el texto proporcionado."""
     try:
         return crud.buscar_juegos_por_desarrollador(nombre_dev=nombre_dev)
     except Exception as e:
         print(f"Error inesperado al buscar juegos por desarrollador: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error interno al buscar juegos por desarrollador.")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error interno al buscar juegos por desarrollador."
+        )
 
-
-# --- Nuevo Endpoint de Compatibilidad ---
-@app.get("/juegos/{id_juego}/compatibilidad/", response_model=JuegoCompatibilidad, tags=["Juegos", "Compatibilidad"], summary="Obtener compatibilidad de un juego con consolas y accesorios")
+@app.get("/juegos/{id_juego}/compatibilidad/", response_model=JuegoCompatibilidad, tags=["Juegos", "Compatibilidad"])
 def obtener_compatibilidad_juego_endpoint(id_juego: int):
-    """
-    Obtiene la información de un juego activo y detalla con qué consolas activas es compatible
-    (basado en la coincidencia entre `juego.plataformas` y `consola.nombre`, ignorando mayúsculas/minúsculas).
-    Para cada consola compatible, también lista sus accesorios activos.
-
-    - **id_juego**: El ID del juego a consultar.
-
-    *Retorna un objeto `JuegoCompatibilidad`.*
-    """
+    """Obtiene la información de compatibilidad de un juego con consolas y accesorios."""
     try:
-        # La función crud.obtener_compatibilidad_juego maneja el 404 del juego
         compatibilidad = crud.obtener_compatibilidad_juego(id_juego=id_juego)
         return compatibilidad
     except HTTPException as http_exc:
-        raise http_exc # Re-lanzar 404 u otros errores HTTP controlados
+        raise http_exc
     except Exception as e:
         print(f"Error inesperado al obtener compatibilidad para juego {id_juego}: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error interno al procesar la compatibilidad del juego.")
-
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error interno al procesar la compatibilidad del juego."
+        )
 
 # --- Endpoints de Consolas ---
-# (POST /consolas/, GET /consolas/, GET /consolas/{id_consola}, PUT /consolas/{id_consola}, DELETE /consolas/{id_consola}, GET /consolas/buscar/por_fabricante/, GET /consolas/{id_consola}/accesorios/)
-# ... (Estos endpoints permanecen igual, incluyendo el de listar accesorios por consola) ...
-@app.post("/consolas/", response_model=Consola, status_code=status.HTTP_201_CREATED, tags=["Consolas"], summary="Crear una nueva consola")
-def crear_nueva_consola(datos_consola: ConsolaCrear):
-    """
-    Crea un nuevo registro de consola.
-
-    - **nombre**: Nombre de la consola (requerido). **Importante:** Este nombre se usará para buscar juegos compatibles (comparado con `juego.plataformas`, ignorando mayúsculas/minúsculas).
-    - **fabricante**: Fabricante de la consola (opcional).
-    - **ano_lanzamiento**: Año de lanzamiento (opcional).
-
-    *Retorna el objeto de la consola creada.*
-    """
+@app.post("/consolas/", response_model=Consola, status_code=status.HTTP_201_CREATED, tags=["Consolas"])
+async def crear_nueva_consola(
+    nombre: Annotated[str, Form()],
+    fabricante: Annotated[Optional[str], Form()] = None,
+    ano_lanzamiento: Annotated[Optional[int], Form()] = None,
+    imagen: Optional[UploadFile] = None
+):
+    """Crea una nueva consola con imagen opcional."""
+    datos_consola = modelos.ConsolaCrear(
+        nombre=nombre,
+        fabricante=fabricante,
+        ano_lanzamiento=ano_lanzamiento
+    )
+    
     try:
-        nueva_consola = crud.crear_consola(datos_consola=datos_consola)
-        return nueva_consola
+        return await crud.crear_consola(datos_consola=datos_consola, imagen=imagen)
     except HTTPException as http_exc:
         raise http_exc
     except Exception as e:
         print(f"Error inesperado al crear consola: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error interno al intentar crear la consola.")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error interno al intentar crear la consola."
+        )
 
-@app.get("/consolas/", response_model=List[Consola], tags=["Consolas"], summary="Listar consolas")
+@app.get("/consolas/", response_model=List[Consola], tags=["Consolas"])
 def leer_consolas(
     saltar: int = Query(0, ge=0, description="Número de registros a saltar"),
     limite: int = Query(10, ge=1, le=100, description="Número máximo de registros a devolver"),
@@ -198,192 +220,242 @@ def leer_consolas(
         return consolas
     except Exception as e:
         print(f"Error inesperado al obtener consolas: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error interno al obtener la lista de consolas.")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error interno al obtener la lista de consolas."
+        )
 
-@app.get("/consolas/{id_consola}", response_model=Consola, tags=["Consolas"], summary="Obtener una consola por ID")
+@app.get("/consolas/{id_consola}", response_model=Consola, tags=["Consolas"])
 def leer_consola_por_id(id_consola: int):
     """Obtiene detalles de una consola específica por su ID (solo activas)."""
     db_consola = crud.obtener_consola_activa_por_id(id_consola=id_consola)
     if db_consola is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Consola con ID {id_consola} no encontrada o inactiva.")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Consola con ID {id_consola} no encontrada o inactiva."
+        )
     return db_consola
 
-@app.put("/consolas/{id_consola}", response_model=Consola, tags=["Consolas"], summary="Actualizar una consola")
-def actualizar_consola_existente(id_consola: int, datos_consola: ConsolaCrear):
-    """
-    Actualiza la información de una consola existente por su ID (solo activas).
-    **Importante:** Si cambias el `nombre`, podría afectar qué juegos se consideran compatibles con ella.
-    """
+@app.put("/consolas/{id_consola}", response_model=Consola, tags=["Consolas"])
+async def actualizar_consola_existente(
+    id_consola: int,
+    nombre: Annotated[Optional[str], Form()] = None,
+    fabricante: Annotated[Optional[str], Form()] = None,
+    ano_lanzamiento: Annotated[Optional[int], Form()] = None,
+    imagen: Optional[UploadFile] = None
+):
+    """Actualiza una consola existente con imagen opcional."""
+    datos_actualizacion = modelos.ConsolaCrear(
+        nombre=nombre if nombre is not None else "",
+        fabricante=fabricante,
+        ano_lanzamiento=ano_lanzamiento
+    )
+    
     try:
-        # crud.actualizar_consola maneja 404
-        consola_actualizada = crud.actualizar_consola(id_consola=id_consola, datos_actualizacion=datos_consola)
-        return consola_actualizada
+        return await crud.actualizar_consola(
+            id_consola=id_consola,
+            datos_actualizacion=datos_actualizacion,
+            imagen=imagen
+        )
     except HTTPException as http_exc:
         raise http_exc
     except Exception as e:
         print(f"Error inesperado al actualizar consola {id_consola}: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error interno al intentar actualizar la consola.")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error interno al intentar actualizar la consola."
+        )
 
-@app.delete("/consolas/{id_consola}", response_model=Consola, tags=["Consolas"], summary="Eliminar (lógicamente) una consola")
+@app.delete("/consolas/{id_consola}", response_model=Consola, tags=["Consolas"])
 def eliminar_consola_existente(id_consola: int):
-    """
-    Marca una consola como eliminada (borrado lógico).
-    **Importante:** También marca como eliminados todos los accesorios asociados a esta consola.
-    """
+    """Marca una consola como eliminada (borrado lógico)."""
     try:
-        # crud.eliminar_logico_consola maneja 404 y 409, y ahora también el borrado de accesorios
         consola_eliminada = crud.eliminar_logico_consola(id_consola=id_consola)
         return consola_eliminada
     except HTTPException as http_exc:
         raise http_exc
     except Exception as e:
         print(f"Error inesperado al eliminar consola {id_consola}: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error interno al intentar eliminar la consola y sus accesorios.")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error interno al intentar eliminar la consola y sus accesorios."
+        )
 
-
-@app.get("/consolas/buscar/por_fabricante/", response_model=List[Consola], tags=["Consolas"], summary="Buscar consolas por fabricante")
-def buscar_consolas_por_fabricante_endpoint(fabricante: str = Query(..., min_length=1, description="Fabricante a buscar (parcial, insensible a mayúsculas)")):
+@app.get("/consolas/buscar/por_fabricante/", response_model=List[Consola], tags=["Consolas"])
+def buscar_consolas_por_fabricante_endpoint(
+    fabricante: str = Query(..., min_length=1, description="Fabricante a buscar")
+):
     """Busca consolas activas cuyo fabricante contenga el texto proporcionado."""
     try:
         consolas = crud.buscar_consolas_por_fabricante(fabricante=fabricante)
         return consolas
     except Exception as e:
         print(f"Error inesperado buscando consolas por fabricante: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error interno al buscar consolas.")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error interno al buscar consolas."
+        )
 
-
-@app.get("/consolas/{id_consola}/accesorios/", response_model=List[Accesorio], tags=["Consolas", "Accesorios"], summary="Listar accesorios de una consola específica")
+@app.get("/consolas/{id_consola}/accesorios/", response_model=List[Accesorio], tags=["Consolas", "Accesorios"])
 def leer_accesorios_por_consola(
     id_consola: int,
     incluir_eliminados: bool = Query(False, description="Incluir accesorios marcados como eliminados")
 ):
-    """
-    Obtiene una lista de todos los accesorios asociados a una consola específica por su ID.
-    Primero verifica que la consola exista (aunque podría estar eliminada si `incluir_eliminados` es True para los accesorios).
-    """
-    # Verificar primero si la consola existe para dar un 404 claro si no existe
+    """Obtiene una lista de accesorios asociados a una consola."""
     consola = crud.obtener_consola_por_id(id_consola)
     if consola is None:
-         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Consola con ID {id_consola} no encontrada.")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Consola con ID {id_consola} no encontrada."
+        )
 
     try:
-        accesorios = crud.obtener_accesorios_por_consola(id_consola=id_consola, incluir_eliminados=incluir_eliminados)
+        accesorios = crud.obtener_accesorios_por_consola(
+            id_consola=id_consola,
+            incluir_eliminados=incluir_eliminados
+        )
         return accesorios
     except Exception as e:
         print(f"Error inesperado al obtener accesorios para consola {id_consola}: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error interno al obtener los accesorios de la consola.")
-
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error interno al obtener los accesorios de la consola."
+        )
 
 # --- Endpoints de Accesorios ---
-# (POST /accesorios/, GET /accesorios/, GET /accesorios/{id_accesorio}, PUT /accesorios/{id_accesorio}, DELETE /accesorios/{id_accesorio})
-# ... (Estos endpoints permanecen igual) ...
-@app.post("/accesorios/", response_model=Accesorio, status_code=status.HTTP_201_CREATED, tags=["Accesorios"], summary="Crear un nuevo accesorio")
-def crear_nuevo_accesorio(datos_accesorio: AccesorioCrear):
-    """
-    Crea un nuevo accesorio y lo asocia a una consola existente y activa.
-
-    - **nombre**: Nombre del accesorio (requerido).
-    - **tipo**: Tipo de accesorio (e.g., 'Control', 'Headset', 'Cámara') (requerido).
-    - **fabricante**: Fabricante del accesorio (opcional).
-    - **id_consola**: ID de la consola a la que pertenece (requerido). La consola debe existir y estar activa.
-
-    *Retorna el objeto del accesorio creado.*
-    """
+@app.post("/accesorios/", response_model=Accesorio, status_code=status.HTTP_201_CREATED, tags=["Accesorios"])
+async def crear_nuevo_accesorio(
+    nombre: Annotated[str, Form()],
+    tipo: Annotated[str, Form()],
+    id_consola: Annotated[int, Form()],
+    fabricante: Annotated[Optional[str], Form()] = None,
+    imagen: Optional[UploadFile] = None
+):
+    """Crea un nuevo accesorio con imagen opcional."""
+    datos_accesorio = modelos.AccesorioCrear(
+        nombre=nombre,
+        tipo=tipo,
+        fabricante=fabricante,
+        id_consola=id_consola
+    )
+    
     try:
-        # crud.crear_accesorio maneja la validación de la consola y duplicados
-        nuevo_accesorio = crud.crear_accesorio(datos_accesorio=datos_accesorio)
-        return nuevo_accesorio
+        return await crud.crear_accesorio(datos_accesorio=datos_accesorio, imagen=imagen)
     except HTTPException as http_exc:
         raise http_exc
     except Exception as e:
         print(f"Error inesperado al crear accesorio: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error interno al intentar crear el accesorio.")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error interno al intentar crear el accesorio."
+        )
 
-@app.get("/accesorios/", response_model=List[Accesorio], tags=["Accesorios"], summary="Listar accesorios")
+@app.get("/accesorios/", response_model=List[Accesorio], tags=["Accesorios"])
 def leer_accesorios(
     saltar: int = Query(0, ge=0, description="Número de registros a saltar"),
     limite: int = Query(10, ge=1, le=100, description="Número máximo de registros a devolver"),
     incluir_eliminados: bool = Query(False, description="Incluir accesorios marcados como eliminados")
 ):
-    """Obtiene una lista paginada de todos los accesorios."""
+    """Obtiene una lista paginada de accesorios."""
     try:
         accesorios = crud.obtener_accesorios(saltar=saltar, limite=limite, incluir_eliminados=incluir_eliminados)
         return accesorios
     except Exception as e:
         print(f"Error inesperado al obtener accesorios: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error interno al obtener la lista de accesorios.")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error interno al obtener la lista de accesorios."
+        )
 
-
-@app.get("/accesorios/{id_accesorio}", response_model=Accesorio, tags=["Accesorios"], summary="Obtener un accesorio por ID")
+@app.get("/accesorios/{id_accesorio}", response_model=Accesorio, tags=["Accesorios"])
 def leer_accesorio_por_id(id_accesorio: int):
     """Obtiene detalles de un accesorio específico por su ID (solo activos)."""
     db_accesorio = crud.obtener_accesorio_activo_por_id(id_accesorio=id_accesorio)
     if db_accesorio is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Accesorio con ID {id_accesorio} no encontrado o inactivo.")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Accesorio con ID {id_accesorio} no encontrado o inactivo."
+        )
     return db_accesorio
 
-@app.put("/accesorios/{id_accesorio}", response_model=Accesorio, tags=["Accesorios"], summary="Actualizar un accesorio")
-def actualizar_accesorio_existente(id_accesorio: int, datos_accesorio: AccesorioCrear):
-    """
-    Actualiza la información de un accesorio existente por su ID (solo activos).
-    Permite cambiar los detalles y re-asociarlo a otra consola activa si se incluye `id_consola`.
-    """
+@app.put("/accesorios/{id_accesorio}", response_model=Accesorio, tags=["Accesorios"])
+async def actualizar_accesorio_existente(
+    id_accesorio: int,
+    nombre: Annotated[Optional[str], Form()] = None,
+    tipo: Annotated[Optional[str], Form()] = None,
+    id_consola: Annotated[Optional[int], Form()] = None,
+    fabricante: Annotated[Optional[str], Form()] = None,
+    imagen: Optional[UploadFile] = None
+):
+    """Actualiza un accesorio existente con imagen opcional."""
+    datos_actualizacion = modelos.AccesorioCrear(
+        nombre=nombre if nombre is not None else "",
+        tipo=tipo if tipo is not None else "",
+        fabricante=fabricante,
+        id_consola=id_consola if id_consola is not None else 0  # 0 será reemplazado por el valor actual
+    )
+    
     try:
-        # crud.actualizar_accesorio maneja 404 y validaciones de consola/duplicados
-        accesorio_actualizado = crud.actualizar_accesorio(id_accesorio=id_accesorio, datos_actualizacion=datos_accesorio)
-        return accesorio_actualizado
+        return await crud.actualizar_accesorio(
+            id_accesorio=id_accesorio,
+            datos_actualizacion=datos_actualizacion,
+            imagen=imagen
+        )
     except HTTPException as http_exc:
         raise http_exc
     except Exception as e:
         print(f"Error inesperado al actualizar accesorio {id_accesorio}: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error interno al intentar actualizar el accesorio.")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error interno al intentar actualizar el accesorio."
+        )
 
-@app.delete("/accesorios/{id_accesorio}", response_model=Accesorio, tags=["Accesorios"], summary="Eliminar (lógicamente) un accesorio")
+@app.delete("/accesorios/{id_accesorio}", response_model=Accesorio, tags=["Accesorios"])
 def eliminar_accesorio_existente(id_accesorio: int):
     """Marca un accesorio como eliminado (borrado lógico)."""
     try:
-        # crud.eliminar_logico_accesorio maneja 404 y 409
         accesorio_eliminado = crud.eliminar_logico_accesorio(id_accesorio=id_accesorio)
         return accesorio_eliminado
     except HTTPException as http_exc:
         raise http_exc
     except Exception as e:
         print(f"Error inesperado al eliminar accesorio {id_accesorio}: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error interno al intentar eliminar el accesorio.")
-
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error interno al intentar eliminar el accesorio."
+        )
 
 # --- Mapa de Endpoints y Raíz ---
-
 DESCRIPCION_MAPA_ENDPOINTS = """
 ## Mapa de Endpoints de la API (Juegos, Consolas, Accesorios y Compatibilidad)
 
 **Juegos:**
 
-* `POST /juegos/`: Crea un nuevo juego.
+* `POST /juegos/`: Crea un nuevo juego (con imagen opcional).
 * `GET /juegos/`: Lista juegos (paginado, opcional eliminados).
 * `GET /juegos/{id_juego}`: Obtiene un juego activo por ID.
-* `PUT /juegos/{id_juego}`: Actualiza un juego activo por ID.
+* `PUT /juegos/{id_juego}`: Actualiza un juego activo (con imagen opcional).
 * `DELETE /juegos/{id_juego}`: Marca un juego como eliminado.
 * `GET /juegos/filtrar/por_genero/`: Filtra juegos activos por género.
 * `GET /juegos/buscar/por_desarrollador/`: Busca juegos activos por desarrollador.
-* **`GET /juegos/{id_juego}/compatibilidad/`**: Muestra el juego, las consolas compatibles y sus accesorios. (NUEVO)
+* `GET /juegos/{id_juego}/compatibilidad/`: Muestra el juego, consolas compatibles y sus accesorios.
 
 **Consolas:**
 
-* `POST /consolas/`: Crea una nueva consola.
-* `GET /consolas/`: Lista consolas (paginado, opcional eliminados).
+* `POST /consolas/`: Crea una nueva consola (con imagen opcional).
+* `GET /consolas/`: Lista consolas (paginado, opcional eliminadas).
 * `GET /consolas/{id_consola}`: Obtiene una consola activa por ID.
-* `PUT /consolas/{id_consola}`: Actualiza una consola activa por ID.
-* `DELETE /consolas/{id_consola}`: Marca una consola y sus accesorios asociados como eliminados.
+* `PUT /consolas/{id_consola}`: Actualiza una consola activa (con imagen opcional).
+* `DELETE /consolas/{id_consola}`: Marca una consola y sus accesorios como eliminados.
 * `GET /consolas/buscar/por_fabricante/`: Busca consolas activas por fabricante.
-* `GET /consolas/{id_consola}/accesorios/`: Lista accesorios (opcional eliminados) para una consola específica.
+* `GET /consolas/{id_consola}/accesorios/`: Lista accesorios para una consola.
 
 **Accesorios:**
 
-* `POST /accesorios/`: Crea un nuevo accesorio para una consola activa.
+* `POST /accesorios/`: Crea un nuevo accesorio (con imagen opcional).
 * `GET /accesorios/`: Lista todos los accesorios (paginado, opcional eliminados).
 * `GET /accesorios/{id_accesorio}`: Obtiene un accesorio activo por ID.
-* `PUT /accesorios/{id_accesorio}`: Actualiza un accesorio activo por ID (puede cambiar la consola asociada).
+* `PUT /accesorios/{id_accesorio}`: Actualiza un accesorio activo (con imagen opcional).
 * `DELETE /accesorios/{id_accesorio}`: Marca un accesorio como eliminado.
 """
 
@@ -392,7 +464,6 @@ async def raiz():
     return {"mensaje": "¡Bienvenido/a a la API de Videojuegos, Consolas y Accesorios! Consulta /docs para la documentación."}
 
 # --- Ejecución del Servidor ---
-# ... (Permanece igual) ...
 if __name__ == "__main__":
     import uvicorn
     print("\n" + "="*25 + " MAPA DE ENDPOINTS (Juegos, Consolas, Accesorios, Compatibilidad) " + "="*25)
@@ -402,5 +473,4 @@ if __name__ == "__main__":
     print("Accede a la documentación interactiva (Swagger UI) en http://127.0.0.1:8000/docs")
     print("Accede a la documentación alternativa (ReDoc) en http://127.0.0.1:8000/redoc")
     print("="*80)
-    # reload=True es útil para desarrollo, considera quitarlo en producción
     uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)

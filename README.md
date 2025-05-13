@@ -1,2 +1,11 @@
-# Captura-tu-Profesor
-deberás buscar dos profes del programa de Ingeniería de Sistemas y Computación que sea de planta y te pueda realizar una tutoría. Contactalos por correo, o cuando los veas presencial.  Solicítale que te revise los criterios de aceptación diligenciando este formulario: https://forms.office.com/r/ZfVFckSBXf 
+# API en Render
+
+## Despliegue
+1. Conecta este repositorio a [Render](https://render.com).
+2. Configura el **Build Command**: `pip install -r requirements.txt`.
+3. Configura el **Start Command**: `uvicorn main:app --host 0.0.0.0 --port 10000`.
+4. La URL estará disponible en: `https://[nombre-del-servicio].onrender.com`.
+
+## Endpoints
+- Documentación: `https://[nombre-del-servicio].onrender.com/docs`
+- Lista de juegos: `GET /juegos/`
