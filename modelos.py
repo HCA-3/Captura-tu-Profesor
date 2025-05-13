@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field, ConfigDict
 from typing import Optional, List, Union
-from fastapi import UploadFile, File
+from fastapi import UploadFile
 
 class ImagenBase(BaseModel):
     nombre_archivo: Optional[str] = Field(None, description="Nombre del archivo de imagen")
@@ -66,20 +66,10 @@ class Accesorio(AccesorioBase):
         validate_assignment = True
     )
 
-# --- Modelos para la Relación Juego-Consola-Accesorio ---
+# --- Modelos para Relaciones ---
 class ConsolaConAccesorios(Consola):
-    """Representa una consola junto con sus accesorios asociados."""
-    accesorios: List[Accesorio] = Field(default_factory=list, description="Lista de accesorios activos para esta consola")
-
-    model_config = ConfigDict(
-        from_attributes = True
-    )
+    accesorios: List[Accesorio] = Field(default_factory=list)
 
 class JuegoCompatibilidad(BaseModel):
-    """Representa la compatibilidad de un juego con consolas y sus accesorios."""
-    juego: Juego = Field(..., description="Detalles del juego consultado")
-    consolas_compatibles: List[ConsolaConAccesorios] = Field(default_factory=list, description="Lista de consolas compatibles con el juego, incluyendo sus accesorios")
-
-    model_config = ConfigDict(
-        from_attributes = True
-    )
+    juego: Juego
+    consolas_compatibles: List[ConsolaConAccesorios] = Field(default_factory=list)
