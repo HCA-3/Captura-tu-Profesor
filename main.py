@@ -16,7 +16,7 @@ import supabase_client # Para guardado en Supabase
 app = FastAPI(
     title="API de Videojuegos, Consolas y Accesorios",
     description="Una API para gestionar información de videojuegos, consolas, sus accesorios y compatibilidad, incluyendo imágenes y subida a Supabase.",
-    version="1.5.3"  # Versión incrementada: campo 'file' ahora obligatorio en modelos
+    version="1.5.4"  # Versión incrementada: eliminado endpoint /upload/
 )
 
 # Montar directorio de imágenes como ruta estática (para imágenes locales)
@@ -33,42 +33,6 @@ async def manejador_excepciones_generico(request, exc: Exception):
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         content={"detail": "Ocurrió un error interno inesperado en el servidor."},
     )
-
-# --- Endpoint de Subida de Imágenes Genérico (Referencia Visual) ---
-@app.post("/upload/", response_model=modelos.RespuestaImagen, tags=["Imágenes"], summary="Sube una imagen localmente o a Supabase")
-async def upload_image_endpoint(
-    file: UploadFile = File(...),
-    save_to_supabase: bool = Form(False)
-):
-    """
-    Sube un archivo de imagen.
-
-    - **file**: El archivo de imagen a subir (requerido).
-    - **save_to_supabase**: Booleano. Si es `True`, la imagen se subirá a Supabase Storage.
-      Si es `False` (valor por defecto), la imagen se guardará localmente.
-    """
-    try:
-        await almacenamiento.validar_imagen(file)
-        await file.seek(0)
-
-        if save_to_supabase:
-            resultado_subida = await supabase_client.upload_to_supabase(file)
-            return modelos.RespuestaImagen(url=resultado_subida["url"], detail="Imagen subida a Supabase exitosamente.")
-        else:
-            info_imagen_local = await almacenamiento.guardar_imagen(file)
-            return modelos.RespuestaImagen(url=info_imagen_local["url"], detail="Imagen guardada localmente exitosamente.")
-
-    except HTTPException as http_exc:
-        raise http_exc
-    except Exception as e:
-        print(f"Error inesperado en el endpoint /upload/: {e}")
-        import traceback
-        traceback.print_exc()
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error interno al procesar la subida de la imagen: {str(e)}"
-        )
-
 
 # --- Endpoints de Juegos ---
 @app.post("/juegos/", response_model=Juego, status_code=status.HTTP_201_CREATED, tags=["Juegos"])
@@ -464,4 +428,3 @@ async def eliminar_accesorio_existente(id_accesorio: int):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Error interno al intentar eliminar el accesorio."
         )
-

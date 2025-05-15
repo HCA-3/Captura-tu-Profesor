@@ -83,14 +83,3 @@ class JuegoCompatibilidad(BaseModel):
     model_config = ConfigDict(
         from_attributes = True
     )
-
-
-# --- Modelo de Respuesta para Subida de Imágenes ---
-class RespuestaImagen(BaseModel):
-    url: str = Field(..., description="URL de la imagen subida.")
-    detail: str = Field(..., description="Detalle del resultado de la operación de subida.")
-
-    model_config = ConfigDict(
-        from_attributes = True
-    )
-
