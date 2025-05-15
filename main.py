@@ -16,7 +16,7 @@ import supabase_client # Para guardado en Supabase
 app = FastAPI(
     title="API de Videojuegos, Consolas y Accesorios",
     description="Una API para gestionar información de videojuegos, consolas, sus accesorios y compatibilidad, incluyendo imágenes y subida a Supabase.",
-    version="1.5.2"  # Versión incrementada por la adición de save_to_supabase a modelos
+    version="1.5.3"  # Versión incrementada: campo 'file' ahora obligatorio en modelos
 )
 
 # Montar directorio de imágenes como ruta estática (para imágenes locales)
@@ -34,7 +34,7 @@ async def manejador_excepciones_generico(request, exc: Exception):
         content={"detail": "Ocurrió un error interno inesperado en el servidor."},
     )
 
-# --- Endpoint de Subida de Imágenes Genérico ---
+# --- Endpoint de Subida de Imágenes Genérico (Referencia Visual) ---
 @app.post("/upload/", response_model=modelos.RespuestaImagen, tags=["Imágenes"], summary="Sube una imagen localmente o a Supabase")
 async def upload_image_endpoint(
     file: UploadFile = File(...),
@@ -78,10 +78,10 @@ async def crear_nuevo_juego(
     plataformas: Annotated[List[str], Form()],
     ano_lanzamiento: Annotated[Optional[int], Form()] = None,
     nombre_desarrollador: Annotated[Optional[str], Form()] = None,
-    file: Optional[UploadFile] = File(None, description="El archivo de imagen a subir (opcional)."),
+    file: UploadFile = File(..., description="El archivo de imagen a subir (requerido)."),
     save_to_supabase: bool = Form(False, description="Guardar en Supabase en lugar de localmente.")
 ):
-    """Crea un nuevo juego con imagen opcional. Permite elegir destino de guardado."""
+    """Crea un nuevo juego con imagen (requerida). Permite elegir destino de guardado."""
     datos_juego = modelos.JuegoCrear(
         titulo=titulo,
         genero=genero,
@@ -109,10 +109,10 @@ async def actualizar_juego_existente(
     plataformas: Annotated[Optional[List[str]], Form()] = None,
     ano_lanzamiento: Annotated[Optional[int], Form()] = None,
     nombre_desarrollador: Annotated[Optional[str], Form()] = None,
-    file: Optional[UploadFile] = File(None, description="El archivo de imagen a subir (opcional)."),
+    file: UploadFile = File(..., description="El archivo de imagen para reemplazar la existente (requerido)."),
     save_to_supabase: bool = Form(False, description="Guardar en Supabase en lugar de localmente.")
 ):
-    """Actualiza un juego existente con imagen opcional. Permite elegir destino de guardado."""
+    """Actualiza un juego existente con imagen (requerida para reemplazar). Permite elegir destino de guardado."""
     update_data = {}
     if titulo is not None: update_data["titulo"] = titulo
     if genero is not None: update_data["genero"] = genero
@@ -142,10 +142,10 @@ async def crear_nueva_consola(
     nombre: Annotated[str, Form()],
     fabricante: Annotated[Optional[str], Form()] = None,
     ano_lanzamiento: Annotated[Optional[int], Form()] = None,
-    file: Optional[UploadFile] = File(None, description="El archivo de imagen a subir (opcional)."),
+    file: UploadFile = File(..., description="El archivo de imagen a subir (requerido)."),
     save_to_supabase: bool = Form(False, description="Guardar en Supabase en lugar de localmente.")
 ):
-    """Crea una nueva consola con imagen opcional. Permite elegir destino de guardado."""
+    """Crea una nueva consola con imagen (requerida). Permite elegir destino de guardado."""
     datos_consola = modelos.ConsolaCrear(
         nombre=nombre,
         fabricante=fabricante,
@@ -169,10 +169,10 @@ async def actualizar_consola_existente(
     nombre: Annotated[Optional[str], Form()] = None,
     fabricante: Annotated[Optional[str], Form()] = None,
     ano_lanzamiento: Annotated[Optional[int], Form()] = None,
-    file: Optional[UploadFile] = File(None, description="El archivo de imagen a subir (opcional)."),
+    file: UploadFile = File(..., description="El archivo de imagen para reemplazar la existente (requerido)."),
     save_to_supabase: bool = Form(False, description="Guardar en Supabase en lugar de localmente.")
 ):
-    """Actualiza una consola existente con imagen opcional. Permite elegir destino de guardado."""
+    """Actualiza una consola existente con imagen (requerida para reemplazar). Permite elegir destino de guardado."""
     update_data = {}
     if nombre is not None: update_data["nombre"] = nombre
     if fabricante is not None: update_data["fabricante"] = fabricante
@@ -201,10 +201,10 @@ async def crear_nuevo_accesorio(
     tipo: Annotated[str, Form()],
     id_consola: Annotated[int, Form()],
     fabricante: Annotated[Optional[str], Form()] = None,
-    file: Optional[UploadFile] = File(None, description="El archivo de imagen a subir (opcional)."),
+    file: UploadFile = File(..., description="El archivo de imagen a subir (requerido)."),
     save_to_supabase: bool = Form(False, description="Guardar en Supabase en lugar de localmente.")
 ):
-    """Crea un nuevo accesorio con imagen opcional. Permite elegir destino de guardado."""
+    """Crea un nuevo accesorio con imagen (requerida). Permite elegir destino de guardado."""
     datos_accesorio = modelos.AccesorioCrear(
         nombre=nombre,
         tipo=tipo,
@@ -229,10 +229,10 @@ async def actualizar_accesorio_existente(
     tipo: Annotated[Optional[str], Form()] = None,
     id_consola: Annotated[Optional[int], Form()] = None,
     fabricante: Annotated[Optional[str], Form()] = None,
-    file: Optional[UploadFile] = File(None, description="El archivo de imagen a subir (opcional)."),
+    file: UploadFile = File(..., description="El archivo de imagen para reemplazar la existente (requerido)."),
     save_to_supabase: bool = Form(False, description="Guardar en Supabase en lugar de localmente.")
 ):
-    """Actualiza un accesorio existente con imagen opcional. Permite elegir destino de guardado."""
+    """Actualiza un accesorio existente con imagen (requerida para reemplazar). Permite elegir destino de guardado."""
     update_data = {}
     if nombre is not None: update_data["nombre"] = nombre
     if tipo is not None: update_data["tipo"] = tipo
@@ -285,10 +285,10 @@ def leer_juego_por_id(id_juego: int):
     return db_juego
 
 @app.delete("/juegos/{id_juego}", response_model=Juego, tags=["Juegos"])
-def eliminar_juego_existente(id_juego: int):
+async def eliminar_juego_existente(id_juego: int):
     """Marca un videojuego como eliminado (borrado lógico). Las imágenes asociadas (locales o Supabase) se intentan eliminar."""
     try:
-        juego_eliminado = crud.eliminar_logico_juego(id_juego=id_juego)
+        juego_eliminado = await crud.eliminar_logico_juego(id_juego=id_juego)
         return juego_eliminado
     except HTTPException as http_exc:
         raise http_exc
@@ -371,10 +371,10 @@ def leer_consola_por_id(id_consola: int):
     return db_consola
 
 @app.delete("/consolas/{id_consola}", response_model=Consola, tags=["Consolas"])
-def eliminar_consola_existente(id_consola: int):
+async def eliminar_consola_existente(id_consola: int):
     """Marca una consola como eliminada (borrado lógico). Las imágenes asociadas se intentan eliminar."""
     try:
-        consola_eliminada = crud.eliminar_logico_consola(id_consola=id_consola)
+        consola_eliminada = await crud.eliminar_logico_consola(id_consola=id_consola)
         return consola_eliminada
     except HTTPException as http_exc:
         raise http_exc
@@ -406,7 +406,7 @@ def leer_accesorios_de_consola(
     incluir_eliminados: bool = Query(False, description="Incluir accesorios marcados como eliminados")
 ):
     """Obtiene los accesorios de una consola específica (solo activos por defecto)."""
-    consola = crud.obtener_consola_por_id(id_consola)
+    consola = crud.obtener_consola_por_id(id_consola) # Para verificar existencia
     if not consola:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Consola con ID {id_consola} no encontrada.")
     if not incluir_eliminados and consola.get("esta_eliminado"):
@@ -451,10 +451,10 @@ def leer_accesorio_por_id(id_accesorio: int):
     return db_accesorio
 
 @app.delete("/accesorios/{id_accesorio}", response_model=Accesorio, tags=["Accesorios"])
-def eliminar_accesorio_existente(id_accesorio: int):
+async def eliminar_accesorio_existente(id_accesorio: int):
     """Marca un accesorio como eliminado (borrado lógico). Las imágenes asociadas se intentan eliminar."""
     try:
-        accesorio_eliminado = crud.eliminar_logico_accesorio(id_accesorio=id_accesorio)
+        accesorio_eliminado = await crud.eliminar_logico_accesorio(id_accesorio=id_accesorio)
         return accesorio_eliminado
     except HTTPException as http_exc:
         raise http_exc
