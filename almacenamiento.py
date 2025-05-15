@@ -8,7 +8,7 @@ import magic
 # Configuración
 DIRECTORIO_IMAGENES = "imagenes"
 TAMANO_MAXIMO_MB = 5  # Tamaño máximo de archivo permitido
-TIPOS_PERMITIDOS = ["image/jpeg", "image/png", "image/webp"]
+TIPOS_PERMITIDOS = ["image/jpeg", "image/png", "image/webp", "image/gif"]
 
 os.makedirs(DIRECTORIO_IMAGENES, exist_ok=True)
 
@@ -25,7 +25,8 @@ async def validar_imagen(archivo: UploadFile):
         )
     
     # Validar tipo de archivo usando magic
-    tipo_real = magic.from_buffer(contenido, mime=True)
+    contenido_para_magic = contenido[:2048] # Leer solo los primeros bytes para magic
+    tipo_real = magic.from_buffer(contenido_para_magic, mime=True)
     if tipo_real not in TIPOS_PERMITIDOS:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
