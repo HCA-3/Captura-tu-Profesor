@@ -3,3 +3,4 @@ uvicorn[standard]==0.27.0
 pydantic==2.6.1
 python-multipart==0.0.6
 python-magic==0.4.27
+supabase==2.0.5
