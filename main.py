@@ -7,8 +7,7 @@ from modelos import (
     Juego, JuegoCrear,
     Consola, ConsolaCrear,
     Accesorio, AccesorioCrear,
-    JuegoCompatibilidad,
-    RespuestaImagen
+    JuegoCompatibilidad
 )
 import almacenamiento # Para guardado local
 import supabase_client # Para guardado en Supabase
@@ -16,7 +15,7 @@ import supabase_client # Para guardado en Supabase
 app = FastAPI(
     title="API de Videojuegos, Consolas y Accesorios",
     description="Una API para gestionar información de videojuegos, consolas, sus accesorios y compatibilidad, incluyendo imágenes y subida a Supabase.",
-    version="1.5.4"  # Versión incrementada: eliminado endpoint /upload/
+    version="1.5.5"  # Versión incrementada: eliminada referencia a RespuestaImagen
 )
 
 # Montar directorio de imágenes como ruta estática (para imágenes locales)
