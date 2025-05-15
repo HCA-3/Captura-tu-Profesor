@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Depends, status, Query, UploadFile, Form
+from fastapi import FastAPI, HTTPException, Depends, status, Query, UploadFile, Form, File
 from fastapi.staticfiles import StaticFiles
 from typing import List, Optional, Annotated
 import crud
@@ -7,18 +7,20 @@ from modelos import (
     Juego, JuegoCrear,
     Consola, ConsolaCrear,
     Accesorio, AccesorioCrear,
-    JuegoCompatibilidad
+    JuegoCompatibilidad,
+    RespuestaImagen # Asegurarse que este modelo exista o crearlo
 )
-import almacenamiento
+import almacenamiento # Para guardado local
+import supabase_client # Para guardado en Supabase
 
 app = FastAPI(
     title="API de Videojuegos, Consolas y Accesorios",
-    description="Una API para gestionar información de videojuegos, consolas, sus accesorios y compatibilidad, incluyendo imágenes.",
-    version="1.4.0"  # Versión incrementada por la adición de imágenes
+    description="Una API para gestionar información de videojuegos, consolas, sus accesorios y compatibilidad, incluyendo imágenes y subida a Supabase.",
+    version="1.5.0"  # Versión incrementada por la adición del endpoint /upload/
 )
 
-# Montar directorio de imágenes como ruta estática
-app.mount("/imagenes", StaticFiles(directory="imagenes"), name="imagenes")
+# Montar directorio de imágenes como ruta estática (para imágenes locales)
+app.mount("/imagenes", StaticFiles(directory="imagenes"), name="imagenes_locales")
 
 # --- Manejador de Excepciones Genérico ---
 @app.exception_handler(Exception)
@@ -32,6 +34,49 @@ async def manejador_excepciones_generico(request, exc: Exception):
         content={"detail": "Ocurrió un error interno inesperado en el servidor."},
     )
 
+# --- Nuevo Endpoint de Subida de Imágenes ---
+@app.post("/upload/", response_model=modelos.RespuestaImagen, tags=["Imágenes"], summary="Sube una imagen localmente o a Supabase")
+async def upload_image_endpoint(
+    file: UploadFile = File(...),
+    save_to_supabase: bool = Form(False)
+):
+    """
+    Sube un archivo de imagen.
+
+    - **file**: El archivo de imagen a subir.
+    - **save_to_supabase**: Booleano. Si es `True`, la imagen se subirá a Supabase Storage.
+      Si es `False` (valor por defecto), la imagen se guardará localmente.
+    """
+    try:
+        # Validar el tipo de imagen usando la función de almacenamiento local primero
+        # Esto asegura que solo tipos permitidos se procesen, incluso para Supabase
+        await almacenamiento.validar_imagen(file) # Reutilizamos la validación existente
+        await file.seek(0) # Rebobinar el archivo después de la validación para la subida
+
+        if save_to_supabase:
+            # Subir a Supabase
+            resultado_subida = await supabase_client.upload_to_supabase(file)
+            return modelos.RespuestaImagen(url=resultado_subida["url"], detail="Imagen subida a Supabase exitosamente.")
+        else:
+            # Guardar localmente
+            info_imagen_local = await almacenamiento.guardar_imagen(file)
+            # Construir la URL completa para la imagen local si es necesario (asumiendo que la app corre en localhost:10000)
+            # Esto es solo un ejemplo, idealmente la URL base vendría de la configuración de la app
+            # Por ahora, devolvemos la URL relativa que ya genera almacenamiento.guardar_imagen
+            return modelos.RespuestaImagen(url=info_imagen_local["url"], detail="Imagen guardada localmente exitosamente.")
+
+    except HTTPException as http_exc:
+        raise http_exc
+    except Exception as e:
+        print(f"Error inesperado en el endpoint /upload/: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error interno al procesar la subida de la imagen: {str(e)}"
+        )
+
+
 # --- Endpoints de Juegos ---
 @app.post("/juegos/", response_model=Juego, status_code=status.HTTP_201_CREATED, tags=["Juegos"])
 async def crear_nuevo_juego(
@@ -40,9 +85,9 @@ async def crear_nuevo_juego(
     plataformas: Annotated[List[str], Form()],
     ano_lanzamiento: Annotated[Optional[int], Form()] = None,
     nombre_desarrollador: Annotated[Optional[str], Form()] = None,
-    imagen: Optional[UploadFile] = None
+    imagen_upload: Optional[UploadFile] = File(None, alias="imagen") # Cambiado para usar File y alias
 ):
-    """Crea un nuevo juego con imagen opcional."""
+    """Crea un nuevo juego con imagen opcional. La imagen se guarda localmente."""
     datos_juego = modelos.JuegoCrear(
         titulo=titulo,
         genero=genero,
@@ -52,7 +97,8 @@ async def crear_nuevo_juego(
     )
     
     try:
-        return await crud.crear_juego(datos_juego=datos_juego, imagen=imagen)
+        # La función crud.crear_juego ya maneja el guardado local de la imagen
+        return await crud.crear_juego(datos_juego=datos_juego, imagen_form=imagen_upload)
     except HTTPException as http_exc:
         raise http_exc
     except Exception as e:
@@ -98,22 +144,27 @@ async def actualizar_juego_existente(
     plataformas: Annotated[Optional[List[str]], Form()] = None,
     ano_lanzamiento: Annotated[Optional[int], Form()] = None,
     nombre_desarrollador: Annotated[Optional[str], Form()] = None,
-    imagen: Optional[UploadFile] = None
+    imagen_upload: Optional[UploadFile] = File(None, alias="imagen") # Cambiado para usar File y alias
 ):
-    """Actualiza un juego existente con imagen opcional."""
-    datos_actualizacion = modelos.JuegoCrear(
-        titulo=titulo if titulo is not None else "",
-        genero=genero if genero is not None else "",
-        plataformas=plataformas if plataformas is not None else [],
-        ano_lanzamiento=ano_lanzamiento,
-        nombre_desarrollador=nombre_desarrollador
-    )
+    """Actualiza un juego existente con imagen opcional. La imagen se guarda localmente."""
+    # Crear un diccionario solo con los campos que tienen valor para la actualización
+    update_data = {}
+    if titulo is not None: update_data["titulo"] = titulo
+    if genero is not None: update_data["genero"] = genero
+    if plataformas is not None: update_data["plataformas"] = plataformas
+    if ano_lanzamiento is not None: update_data["ano_lanzamiento"] = ano_lanzamiento
+    if nombre_desarrollador is not None: update_data["nombre_desarrollador"] = nombre_desarrollador
+    
+    # Convertir a Pydantic model si es necesario para la función crud
+    # Esto depende de cómo esté definida crud.actualizar_juego
+    # Asumimos que crud.actualizar_juego puede manejar un dict o un modelo parcial
     
     try:
+        # La función crud.actualizar_juego ya maneja el guardado/reemplazo local de la imagen
         return await crud.actualizar_juego(
             id_juego=id_juego,
-            datos_actualizacion=datos_actualizacion,
-            imagen=imagen
+            datos_actualizacion_dict=update_data, # Pasando el dict directamente
+            imagen_form=imagen_upload
         )
     except HTTPException as http_exc:
         raise http_exc
@@ -126,7 +177,7 @@ async def actualizar_juego_existente(
 
 @app.delete("/juegos/{id_juego}", response_model=Juego, tags=["Juegos"])
 def eliminar_juego_existente(id_juego: int):
-    """Marca un videojuego como eliminado (borrado lógico)."""
+    """Marca un videojuego como eliminado (borrado lógico). Las imágenes asociadas (locales) se eliminan."""
     try:
         juego_eliminado = crud.eliminar_logico_juego(id_juego=id_juego)
         return juego_eliminado
@@ -188,9 +239,9 @@ async def crear_nueva_consola(
     nombre: Annotated[str, Form()],
     fabricante: Annotated[Optional[str], Form()] = None,
     ano_lanzamiento: Annotated[Optional[int], Form()] = None,
-    imagen: Optional[UploadFile] = None
+    imagen_upload: Optional[UploadFile] = File(None, alias="imagen") # Cambiado para usar File y alias
 ):
-    """Crea una nueva consola con imagen opcional."""
+    """Crea una nueva consola con imagen opcional. La imagen se guarda localmente."""
     datos_consola = modelos.ConsolaCrear(
         nombre=nombre,
         fabricante=fabricante,
@@ -198,7 +249,7 @@ async def crear_nueva_consola(
     )
     
     try:
-        return await crud.crear_consola(datos_consola=datos_consola, imagen=imagen)
+        return await crud.crear_consola(datos_consola=datos_consola, imagen_form=imagen_upload)
     except HTTPException as http_exc:
         raise http_exc
     except Exception as e:
@@ -242,20 +293,19 @@ async def actualizar_consola_existente(
     nombre: Annotated[Optional[str], Form()] = None,
     fabricante: Annotated[Optional[str], Form()] = None,
     ano_lanzamiento: Annotated[Optional[int], Form()] = None,
-    imagen: Optional[UploadFile] = None
+    imagen_upload: Optional[UploadFile] = File(None, alias="imagen") # Cambiado para usar File y alias
 ):
-    """Actualiza una consola existente con imagen opcional."""
-    datos_actualizacion = modelos.ConsolaCrear(
-        nombre=nombre if nombre is not None else "",
-        fabricante=fabricante,
-        ano_lanzamiento=ano_lanzamiento
-    )
-    
+    """Actualiza una consola existente con imagen opcional. La imagen se guarda localmente."""
+    update_data = {}
+    if nombre is not None: update_data["nombre"] = nombre
+    if fabricante is not None: update_data["fabricante"] = fabricante
+    if ano_lanzamiento is not None: update_data["ano_lanzamiento"] = ano_lanzamiento
+
     try:
         return await crud.actualizar_consola(
             id_consola=id_consola,
-            datos_actualizacion=datos_actualizacion,
-            imagen=imagen
+            datos_actualizacion_dict=update_data,
+            imagen_form=imagen_upload
         )
     except HTTPException as http_exc:
         raise http_exc
@@ -268,7 +318,7 @@ async def actualizar_consola_existente(
 
 @app.delete("/consolas/{id_consola}", response_model=Consola, tags=["Consolas"])
 def eliminar_consola_existente(id_consola: int):
-    """Marca una consola como eliminada (borrado lógico)."""
+    """Marca una consola como eliminada (borrado lógico). Las imágenes asociadas (locales) se eliminan."""
     try:
         consola_eliminada = crud.eliminar_logico_consola(id_consola=id_consola)
         return consola_eliminada
@@ -302,7 +352,7 @@ def leer_accesorios_por_consola(
     incluir_eliminados: bool = Query(False, description="Incluir accesorios marcados como eliminados")
 ):
     """Obtiene una lista de accesorios asociados a una consola."""
-    consola = crud.obtener_consola_por_id(id_consola)
+    consola = crud.obtener_consola_por_id(id_consola) # No filtrar por activo aquí, para poder ver accesorios de consolas eliminadas si se desea
     if consola is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -329,9 +379,9 @@ async def crear_nuevo_accesorio(
     tipo: Annotated[str, Form()],
     id_consola: Annotated[int, Form()],
     fabricante: Annotated[Optional[str], Form()] = None,
-    imagen: Optional[UploadFile] = None
+    imagen_upload: Optional[UploadFile] = File(None, alias="imagen") # Cambiado para usar File y alias
 ):
-    """Crea un nuevo accesorio con imagen opcional."""
+    """Crea un nuevo accesorio con imagen opcional. La imagen se guarda localmente."""
     datos_accesorio = modelos.AccesorioCrear(
         nombre=nombre,
         tipo=tipo,
@@ -340,7 +390,7 @@ async def crear_nuevo_accesorio(
     )
     
     try:
-        return await crud.crear_accesorio(datos_accesorio=datos_accesorio, imagen=imagen)
+        return await crud.crear_accesorio(datos_accesorio=datos_accesorio, imagen_form=imagen_upload)
     except HTTPException as http_exc:
         raise http_exc
     except Exception as e:
@@ -385,21 +435,20 @@ async def actualizar_accesorio_existente(
     tipo: Annotated[Optional[str], Form()] = None,
     id_consola: Annotated[Optional[int], Form()] = None,
     fabricante: Annotated[Optional[str], Form()] = None,
-    imagen: Optional[UploadFile] = None
+    imagen_upload: Optional[UploadFile] = File(None, alias="imagen") # Cambiado para usar File y alias
 ):
-    """Actualiza un accesorio existente con imagen opcional."""
-    datos_actualizacion = modelos.AccesorioCrear(
-        nombre=nombre if nombre is not None else "",
-        tipo=tipo if tipo is not None else "",
-        fabricante=fabricante,
-        id_consola=id_consola if id_consola is not None else 0  # 0 será reemplazado por el valor actual
-    )
-    
+    """Actualiza un accesorio existente con imagen opcional. La imagen se guarda localmente."""
+    update_data = {}
+    if nombre is not None: update_data["nombre"] = nombre
+    if tipo is not None: update_data["tipo"] = tipo
+    if id_consola is not None: update_data["id_consola"] = id_consola
+    if fabricante is not None: update_data["fabricante"] = fabricante
+
     try:
         return await crud.actualizar_accesorio(
             id_accesorio=id_accesorio,
-            datos_actualizacion=datos_actualizacion,
-            imagen=imagen
+            datos_actualizacion_dict=update_data,
+            imagen_form=imagen_upload
         )
     except HTTPException as http_exc:
         raise http_exc
@@ -412,7 +461,7 @@ async def actualizar_accesorio_existente(
 
 @app.delete("/accesorios/{id_accesorio}", response_model=Accesorio, tags=["Accesorios"])
 def eliminar_accesorio_existente(id_accesorio: int):
-    """Marca un accesorio como eliminado (borrado lógico)."""
+    """Marca un accesorio como eliminado (borrado lógico). Las imágenes asociadas (locales) se eliminan."""
     try:
         accesorio_eliminado = crud.eliminar_logico_accesorio(id_accesorio=id_accesorio)
         return accesorio_eliminado
@@ -425,52 +474,6 @@ def eliminar_accesorio_existente(id_accesorio: int):
             detail="Error interno al intentar eliminar el accesorio."
         )
 
-# --- Mapa de Endpoints y Raíz ---
-DESCRIPCION_MAPA_ENDPOINTS = """
-## Mapa de Endpoints de la API (Juegos, Consolas, Accesorios y Compatibilidad)
+# Inicialización de archivos CSV (si no existen)
+# crud.inicializar_archivos_csv() # Comentado porque la función no existe en crud.py
 
-**Juegos:**
-
-* `POST /juegos/`: Crea un nuevo juego (con imagen opcional).
-* `GET /juegos/`: Lista juegos (paginado, opcional eliminados).
-* `GET /juegos/{id_juego}`: Obtiene un juego activo por ID.
-* `PUT /juegos/{id_juego}`: Actualiza un juego activo (con imagen opcional).
-* `DELETE /juegos/{id_juego}`: Marca un juego como eliminado.
-* `GET /juegos/filtrar/por_genero/`: Filtra juegos activos por género.
-* `GET /juegos/buscar/por_desarrollador/`: Busca juegos activos por desarrollador.
-* `GET /juegos/{id_juego}/compatibilidad/`: Muestra el juego, consolas compatibles y sus accesorios.
-
-**Consolas:**
-
-* `POST /consolas/`: Crea una nueva consola (con imagen opcional).
-* `GET /consolas/`: Lista consolas (paginado, opcional eliminadas).
-* `GET /consolas/{id_consola}`: Obtiene una consola activa por ID.
-* `PUT /consolas/{id_consola}`: Actualiza una consola activa (con imagen opcional).
-* `DELETE /consolas/{id_consola}`: Marca una consola y sus accesorios como eliminados.
-* `GET /consolas/buscar/por_fabricante/`: Busca consolas activas por fabricante.
-* `GET /consolas/{id_consola}/accesorios/`: Lista accesorios para una consola.
-
-**Accesorios:**
-
-* `POST /accesorios/`: Crea un nuevo accesorio (con imagen opcional).
-* `GET /accesorios/`: Lista todos los accesorios (paginado, opcional eliminados).
-* `GET /accesorios/{id_accesorio}`: Obtiene un accesorio activo por ID.
-* `PUT /accesorios/{id_accesorio}`: Actualiza un accesorio activo (con imagen opcional).
-* `DELETE /accesorios/{id_accesorio}`: Marca un accesorio como eliminado.
-"""
-
-@app.get("/", include_in_schema=False)
-async def raiz():
-    return {"mensaje": "¡Bienvenido/a a la API de Videojuegos, Consolas y Accesorios! Consulta /docs para la documentación."}
-
-# --- Ejecución del Servidor ---
-if __name__ == "__main__":
-    import uvicorn
-    print("\n" + "="*25 + " MAPA DE ENDPOINTS (Juegos, Consolas, Accesorios, Compatibilidad) " + "="*25)
-    print(DESCRIPCION_MAPA_ENDPOINTS)
-    print("="*80)
-    print("Iniciando servidor Uvicorn en http://127.0.0.1:8000")
-    print("Accede a la documentación interactiva (Swagger UI) en http://127.0.0.1:8000/docs")
-    print("Accede a la documentación alternativa (ReDoc) en http://127.0.0.1:8000/redoc")
-    print("="*80)
-    uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)
